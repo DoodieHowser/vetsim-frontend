@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
 import pepperFrontalImg from "./images/pepper_frontal.png";
@@ -35,59 +35,6 @@ const CASE_OPTIONS = [
   { id: "gdv_001", label: "Biscuit — Emergency GDV", sub: "Labrador mix · Hard", emoji: "🚨" },
 ];
 
-const DERM_TESTS = [
-  { group: "Skin & coat", tests: [
-    { key: "skin_cytology", label: "Skin cytology", desc: "Tape prep of affected skin", cost: "$65" },
-    { key: "skin_scrape", label: "Skin scrape", desc: "Microscopy of skin surface sample", cost: "$45" },
-    { key: "ear_cytology", label: "Ear cytology", desc: "Swab of ear canal discharge", cost: "$55" },
-  ]},
-  { group: "Allergy", tests: [
-    { key: "intradermal_allergy", label: "Intradermal allergy test", desc: "Intradermal injection panel", cost: "$280" },
-    { key: "blood_allergy_panel", label: "Serum allergy panel", desc: "Blood IgE measurement", cost: "$195" },
-    { key: "food_elimination_trial", label: "Food elimination trial", desc: "8-week hydrolysed diet trial", cost: "$0" },
-  ]},
-];
-
-const GDV_TESTS = [
-  { group: "Imaging", tests: [
-    { key: "xray_abdominal", label: "Abdominal X-ray", desc: "Right lateral and VD radiographs", cost: "$180" },
-    { key: "ultrasound_abdominal", label: "Abdominal ultrasound", desc: "Transabdominal sonography", cost: "$220" },
-  ]},
-  { group: "Blood work", tests: [
-    { key: "blood_cbc", label: "CBC", desc: "Complete blood count", cost: "$95" },
-    { key: "blood_chemistry", label: "Blood chemistry", desc: "Metabolic panel with lactate", cost: "$140" },
-  ]},
-  { group: "Cardiac", tests: [
-    { key: "ecg", label: "ECG", desc: "Continuous cardiac rhythm monitoring", cost: "$75" },
-  ]},
-];
-
-const DERM_DIAGNOSES = [
-  { group: "Allergic & inflammatory", dx: [
-    { label: "Atopic dermatitis", id: "atopic_dermatitis" },
-    { label: "Malassezia / yeast dermatitis", id: "malassezia_dermatitis" },
-    { label: "Contact allergy", id: "contact_allergy" },
-  ]},
-  { group: "Parasitic", dx: [
-    { label: "Sarcoptic mange", id: "sarcoptic_mange" },
-    { label: "Demodectic mange", id: "demodectic_mange" },
-  ]},
-  { group: "Dietary", dx: [
-    { label: "Food allergy — dietary trigger", id: "food_allergy" },
-  ]},
-];
-
-const GDV_DIAGNOSES = [
-  { group: "Emergency", dx: [
-    { label: "Gastric dilatation-volvulus (GDV)", id: "gdv" },
-    { label: "Gastric bloat without volvulus", id: "gastric_bloat" },
-  ]},
-  { group: "Other", dx: [
-    { label: "Splenic mass", id: "splenic_mass" },
-    { label: "Intestinal obstruction", id: "intestinal_obstruction" },
-    { label: "Pancreatitis", id: "pancreatitis" },
-  ]},
-];
 
 
 // Each SVG uses the image's native pixel dimensions as its viewBox so the full image
@@ -98,23 +45,20 @@ const VIEWS = [
     id: "lateral", label: "Lateral",
     image: pepperImg,
     origW: 1536, origH: 1024, labelFontSize: 38,
-    // Dog faces LEFT. Head is at left, rump/tail at right. Near ear (dog's right) faces camera.
     regions: [
-      { mapKey: "lat_temperature",     key: "temperature", label: "Temp",    cx: 1300, cy:  380, rx:  90, ry:  70 },
-      { mapKey: "lat_general",         key: "general",     label: "General", cx:  750, cy:  470, rx: 120, ry: 100 },
-      { mapKey: "lat_skin",            key: "skin",        label: "Skin",    cx:  800, cy:  600, rx: 400, ry:  50 },
-      { mapKey: "lat_lymph_prescap",   key: "lymph_nodes", label: "Lymph",   cx:  460, cy:  400, rx:  60, ry:  50 },
-      { mapKey: "lat_lymph_submandib", key: "lymph_nodes", label: "Lymph",   cx:  220, cy:  470, rx:  55, ry:  42 },
-      { mapKey: "lat_paws_front",      key: "paws",        label: "Paws",    cx:  440, cy:  920, rx: 100, ry:  50 },
-      { mapKey: "lat_paws_back",       key: "paws",        label: "Paws",    cx: 1220, cy:  920, rx: 110, ry:  50 },
-      { mapKey: "lat_ears_far",        key: "ears",        label: "Ears",    cx:  265, cy:  135, rx:  55, ry:  80 },
+      { mapKey: "lat_temperature", key: "temperature", label: "Temp",    cx: 1300, cy:  380, rx:  90, ry:  70 },
+      { mapKey: "lat_general",     key: "general",     label: "General", cx:  750, cy:  470, rx: 120, ry: 100 },
+      { mapKey: "lat_skin",        key: "skin",        label: "Skin",    cx:  800, cy:  600, rx: 400, ry:  50 },
+      { mapKey: "lat_lymph",       key: "lymph_nodes", label: "Lymph",   cx:  460, cy:  400, rx:  60, ry:  50 },
+      { mapKey: "lat_paws",        key: "paws",        label: "Paws",    cx:  440, cy:  920, rx: 100, ry:  50 },
+      { mapKey: "lat_ears",        key: "ears",        label: "Ears",    cx:  265, cy:  155, rx:  58, ry:  88 },
+      { mapKey: "lat_eyes",        key: "eyes",        label: "Eyes",    cx:  155, cy:  290, rx:  50, ry:  40 },
     ],
   },
   {
     id: "ventral", label: "Ventral",
     image: pepperVentralImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
-    // Belly-up, head at top. Pink erythema on inner thighs/groin. Front paws flanking chest.
     regions: [
       { mapKey: "ven_hydration", key: "hydration", label: "Hydration", cx: 510, cy:  340, rx: 140, ry:  70 },
       { mapKey: "ven_abdomen",   key: "abdomen",   label: "Abdomen",   cx: 510, cy:  720, rx: 150, ry: 120 },
@@ -125,49 +69,45 @@ const VIEWS = [
     id: "frontal", label: "Frontal",
     image: pepperFrontalImg,
     origW: 1122, origH: 1402, labelFontSize: 28,
-    // Dog facing camera. Large bat ears at top. Pink patches at front of shoulder joints.
     regions: [
-      { mapKey: "frt_ears_left",      key: "ears",           label: "Ears",  cx:  210, cy: 175, rx: 130, ry: 115 },
-      { mapKey: "frt_ears_right",     key: "ears",           label: "Ears",  cx:  910, cy: 175, rx: 130, ry: 115 },
-      { mapKey: "frt_respiratory",    key: "respiratory",    label: "Lungs", cx:  561, cy: 700, rx: 240, ry: 155 },
-      { mapKey: "frt_cardiovascular", key: "cardiovascular", label: "Heart", cx:  650, cy: 660, rx: 130, ry: 110 },
+      { mapKey: "frt_ears",         key: "ears",           label: "Ears",   cx:  210, cy: 175, rx: 130, ry: 115 },
+      { mapKey: "frt_eyes",         key: "eyes",           label: "Eyes",   cx:  370, cy: 430, rx:  80, ry:  60 },
+      { mapKey: "frt_respiratory",  key: "respiratory",    label: "Lungs",  cx:  561, cy: 700, rx: 240, ry: 155 },
+      { mapKey: "frt_cardio",       key: "cardiovascular", label: "Heart",  cx:  650, cy: 660, rx: 130, ry: 110 },
+      { mapKey: "frt_elbows",       key: "elbows",         label: "Elbows", cx:  195, cy: 870, rx: 120, ry:  80 },
     ],
   },
   {
     id: "caudal", label: "Caudal",
     image: pepperCaudalImg,
     origW: 1122, origH: 1402, labelFontSize: 28,
-    // Dog's rear. Pink bilateral inner-thigh erythema. Paws at bottom. Head wrinkles visible at top.
     regions: [
-      { mapKey: "cau_temperature", key: "temperature", label: "Temp", cx:  560, cy:  510, rx: 100, ry:  80 },
-      { mapKey: "cau_paws_left",   key: "paws",        label: "Paws", cx:  310, cy: 1290, rx: 120, ry:  60 },
-      { mapKey: "cau_paws_right",  key: "paws",        label: "Paws", cx:  810, cy: 1290, rx: 120, ry:  60 },
+      { mapKey: "cau_temperature", key: "temperature", label: "Temp", cx: 560, cy:  510, rx: 100, ry:  80 },
+      { mapKey: "cau_paws",        key: "paws",        label: "Paws", cx: 310, cy: 1290, rx: 120, ry:  60 },
     ],
   },
 ];
 
 // GDV (Biscuit) exam views — dog faces RIGHT in lateral.
-// GDV-relevant regions: abdomen (primary), cardiovascular, respiratory, general, hydration, temperature, paws.
 const BISCUIT_VIEWS = [
   {
     id: "lateral", label: "Lateral",
     image: biscuitImg,
     origW: 1536, origH: 1024, labelFontSize: 38,
-    // Dog faces RIGHT. Head at right, rump/tail at left. Front legs under chest (right side).
     regions: [
-      { mapKey: "lat_abdomen",    key: "abdomen",        label: "Abdomen", cx:  680, cy: 640, rx: 250, ry: 140 },
-      { mapKey: "lat_cardio",     key: "cardiovascular", label: "Heart",   cx: 1010, cy: 440, rx: 115, ry:  90 },
-      { mapKey: "lat_general",    key: "general",        label: "General", cx:  720, cy: 370, rx: 120, ry:  95 },
-      { mapKey: "lat_temp",       key: "temperature",    label: "Temp",    cx:  220, cy: 340, rx:  90, ry:  70 },
-      { mapKey: "lat_paws_front", key: "paws",           label: "Paws",    cx: 1150, cy: 930, rx: 110, ry:  50 },
-      { mapKey: "lat_paws_back",  key: "paws",           label: "Paws",    cx:  360, cy: 930, rx: 110, ry:  50 },
+      { mapKey: "lat_abdomen", key: "abdomen",        label: "Abdomen", cx:  680, cy: 640, rx: 250, ry: 140 },
+      { mapKey: "lat_cardio",  key: "cardiovascular", label: "Heart",   cx: 1010, cy: 440, rx: 115, ry:  90 },
+      { mapKey: "lat_general", key: "general",        label: "General", cx:  720, cy: 370, rx: 120, ry:  95 },
+      { mapKey: "lat_temp",    key: "temperature",    label: "Temp",    cx:  220, cy: 340, rx:  90, ry:  70 },
+      { mapKey: "lat_paws",    key: "paws",           label: "Paws",    cx: 1150, cy: 930, rx: 110, ry:  50 },
+      { mapKey: "lat_eyes",    key: "eyes",           label: "Eyes",    cx: 1390, cy: 295, rx:  52, ry:  42 },
+      { mapKey: "lat_ears",    key: "ears",           label: "Ears",    cx: 1345, cy: 220, rx:  65, ry:  90 },
     ],
   },
   {
     id: "ventral", label: "Ventral",
     image: biscuitVentralImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
-    // Massively distended abdomen dominates. Hydration checked at throat/mucosa (top).
     regions: [
       { mapKey: "ven_hydration", key: "hydration", label: "Hydration", cx: 512, cy:  290, rx: 140, ry:  70 },
       { mapKey: "ven_abdomen",   key: "abdomen",   label: "Abdomen",   cx: 512, cy:  820, rx: 400, ry: 290 },
@@ -177,31 +117,56 @@ const BISCUIT_VIEWS = [
     id: "frontal", label: "Frontal",
     image: biscuitFrontalImg,
     origW: 1122, origH: 1402, labelFontSize: 28,
-    // Chest + slightly distended lower belly visible from front.
     regions: [
-      { mapKey: "frt_respiratory",    key: "respiratory",    label: "Lungs",   cx: 561, cy: 620, rx: 250, ry: 165 },
-      { mapKey: "frt_cardiovascular", key: "cardiovascular", label: "Heart",   cx: 650, cy: 590, rx: 155, ry: 120 },
-      { mapKey: "frt_abdomen",        key: "abdomen",        label: "Abdomen", cx: 561, cy: 920, rx: 280, ry: 130 },
+      { mapKey: "frt_ears",        key: "ears",           label: "Ears",    cx: 185, cy: 290, rx: 115, ry: 110 },
+      { mapKey: "frt_eyes",        key: "eyes",           label: "Eyes",    cx: 385, cy: 430, rx:  85, ry:  65 },
+      { mapKey: "frt_respiratory", key: "respiratory",    label: "Lungs",   cx: 561, cy: 620, rx: 250, ry: 165 },
+      { mapKey: "frt_cardio",      key: "cardiovascular", label: "Heart",   cx: 650, cy: 590, rx: 155, ry: 120 },
+      { mapKey: "frt_abdomen",     key: "abdomen",        label: "Abdomen", cx: 561, cy: 920, rx: 280, ry: 130 },
+      { mapKey: "frt_elbows",      key: "elbows",         label: "Elbows",  cx: 195, cy: 870, rx: 120, ry:  80 },
     ],
   },
   {
     id: "caudal", label: "Caudal",
     image: biscuitCaudalImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
-    // Rear view. Temperature (rectal) at tail base, hind paws at bottom.
     regions: [
       { mapKey: "cau_temperature", key: "temperature", label: "Temp", cx: 512, cy:  475, rx: 110, ry:  85 },
-      { mapKey: "cau_paws_left",   key: "paws",        label: "Paws", cx: 290, cy: 1390, rx:  95, ry:  55 },
-      { mapKey: "cau_paws_right",  key: "paws",        label: "Paws", cx: 730, cy: 1390, rx:  95, ry:  55 },
+      { mapKey: "cau_paws",        key: "paws",        label: "Paws", cx: 290, cy: 1390, rx:  95, ry:  55 },
     ],
   },
 ];
 
-const ACTION_TYPE_ORDER = ["injectable", "oral", "intervention", "surgery"];
-const ACTION_TYPE_LABELS = { injectable: "Injectables", oral: "Oral medications", intervention: "Interventions", surgery: "Surgical" };
+const ACTION_TYPE_ORDER = ["injectable", "intervention", "oral", "topical"];
+const ACTION_TYPE_LABELS = { injectable: "Injectables", intervention: "Interventions", oral: "Oral medications", topical: "Topical treatments" };
 
-function getTests(caseId) { return caseId === "gdv_001" ? GDV_TESTS : DERM_TESTS; }
-function getDiagnoses(caseId) { return caseId === "gdv_001" ? GDV_DIAGNOSES : DERM_DIAGNOSES; }
+const DIAGNOSTICS_CATEGORY_ORDER = [
+  "Point-of-Care",
+  "Rapid / SNAP Tests",
+  "Dermatology & Cytology",
+  "Blood & Biochemistry",
+  "Urine & Faecal",
+  "Microbiology",
+  "Imaging",
+  "Cardiac & Neurological",
+  "Biopsy & Histopathology",
+  "Diet & Trials",
+  "Allergy / Immunology",
+];
+
+const DIAGNOSIS_CATEGORY_ORDER = [
+  "Dermatology",
+  "Digestive",
+  "Musculoskeletal",
+  "Cardiovascular",
+  "Respiratory",
+  "Endocrine",
+  "Urinary",
+  "Neurological",
+  "Infectious / Immune",
+  "Oncology",
+];
+
 function getViews(caseId) { return caseId === "gdv_001" ? BISCUIT_VIEWS : VIEWS; }
 
 const PEPPER_CLOSEUPS = {
@@ -258,7 +223,22 @@ function ScoreBar({ label, value, color }) {
   );
 }
 
-function ChatMessage({ msg }) {
+function ChatMessage({ msg, onViewResult }) {
+  if (msg.role === "test_result") return (
+    <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
+      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--color-background-tertiary)", border: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, color: "var(--color-text-secondary)", flexShrink: 0 }}>⚕</div>
+      <div style={{ maxWidth: "85%", padding: "8px 12px", borderRadius: 10, borderBottomLeftRadius: 3, fontSize: 13, lineHeight: 1.55, background: "var(--color-background-tertiary)", color: "var(--color-text-primary)" }}>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>{msg.testLabel}</div>
+        <div>{msg.text}</div>
+        <button
+          onClick={() => onViewResult && onViewResult(msg.testKey)}
+          style={{ marginTop: 4, padding: 0, background: "none", border: "none", color: "var(--color-text-info)", fontSize: 12, fontWeight: 500, cursor: "pointer", textDecoration: "underline" }}
+        >
+          View result
+        </button>
+      </div>
+    </div>
+  );
   if (msg.role === "player") return (
     <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
       <div style={{ maxWidth: "78%", padding: "8px 12px", borderRadius: 10, borderBottomRightRadius: 3, fontSize: 13, lineHeight: 1.55, background: "var(--color-background-info)", color: "var(--color-text-info)" }}>{msg.text}</div>
@@ -371,6 +351,52 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
           alt={`${view.label} view`}
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
         />
+
+        {/* SVG region overlay — viewBox matches native image px so coords align with objectFit:contain */}
+        <svg
+          viewBox={`0 0 ${view.origW} ${view.origH}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            pointerEvents: selectedArea ? "none" : "auto",
+            zIndex: 5,
+          }}
+        >
+          <defs>
+            {/* Dark halo makes strokes visible on both light and dark coats */}
+            <filter id="rgn-halo" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="0" stdDeviation={Math.round(view.origW * 0.007)} floodColor="rgba(0,0,0,0.9)" floodOpacity="1" />
+            </filter>
+          </defs>
+          {view.regions.map(region => {
+            const isExamined = !!examLookup[region.key];
+            const isActive = selectedArea === region.key;
+            const sw = Math.round(view.origW * 0.005);
+            return (
+              <g key={region.mapKey} onClick={() => handleAreaTap(region.key)} style={{ cursor: isExamined ? "default" : "pointer" }}>
+                <ellipse
+                  cx={region.cx} cy={region.cy} rx={region.rx} ry={region.ry}
+                  fill={isExamined ? "rgba(34,197,94,0.18)" : isActive ? "rgba(59,130,246,0.22)" : "rgba(255,255,255,0.1)"}
+                  stroke={isExamined ? "rgba(34,197,94,1)" : isActive ? "rgba(99,179,255,1)" : "rgba(255,255,255,0.95)"}
+                  strokeWidth={isActive ? sw * 2 : sw * 1.4}
+                  strokeDasharray={isExamined || isActive ? "none" : `${sw * 5} ${sw * 3}`}
+                  filter="url(#rgn-halo)"
+                />
+                <text
+                  x={region.cx} y={region.cy + region.ry + view.labelFontSize * 1.15}
+                  textAnchor="middle" fontSize={view.labelFontSize}
+                  fill="white"
+                  stroke="rgba(0,0,0,0.85)"
+                  strokeWidth={view.labelFontSize * 0.4}
+                  paintOrder="stroke"
+                  style={{ pointerEvents: "none", userSelect: "none", fontFamily: "Arial,sans-serif", fontWeight: 700 }}
+                >
+                  {region.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
 
         {/* Backdrop — dims image and dismisses sheet on outside tap */}
         <div
@@ -508,32 +534,29 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
   );
 }
 
-function DiagnosticsPanel({ caseId, onRun, testsRun, testResults = {} }) {
-  const groups = getTests(caseId);
+function DiagnosticsPanel({ tests, onRun, onView, testsRun }) {
+  const grouped = tests.reduce((acc, t) => {
+    const cat = t.category;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(t);
+    return acc;
+  }, {});
+  const orderedCats = DIAGNOSTICS_CATEGORY_ORDER.filter(c => grouped[c]);
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
       <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 12 }}>Select a test to run</div>
-      {groups.map(g => (
-        <div key={g.group} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{g.group}</div>
+      {orderedCats.map(cat => (
+        <div key={cat} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{cat}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {g.tests.map(t => {
+            {grouped[cat].map(t => {
               const done = testsRun.includes(t.key);
-              const result = testResults[t.key];
               return (
                 <div key={t.key}>
-                  <button onClick={() => !done && onRun(t.key, t.label)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: result ? "var(--border-radius-md) var(--border-radius-md) 0 0" : "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", borderBottom: result ? "none" : undefined, cursor: done ? "default" : "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)", opacity: done ? 0.8 : 1 }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
-                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{t.desc}</div>
-                    </div>
-                    <span style={{ fontSize: 11, color: "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{t.cost}</span>
+                  <button onClick={() => done ? onView(t.key) : onRun(t.key)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)" }}>
+                    <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
+                    <span style={{ fontSize: 11, color: done ? "var(--color-text-info)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{done ? "View result" : (t.cost_tier === "high" ? "High cost" : t.cost_tier === "medium" ? "Medium cost" : "Low cost")}</span>
                   </button>
-                  {result && (
-                    <div style={{ padding: "8px 12px 10px", background: "var(--color-background-info)", border: "0.5px solid var(--color-border-tertiary)", borderTop: "none", borderRadius: "0 0 var(--border-radius-md) var(--border-radius-md)", fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.5 }}>
-                      {result}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -544,37 +567,153 @@ function DiagnosticsPanel({ caseId, onRun, testsRun, testResults = {} }) {
   );
 }
 
-function DiagnosisPanel({ caseId, onDiagnose, attempted }) {
-  const groups = getDiagnoses(caseId);
+function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [], onSelect }) {
+  const [query, setQuery] = useState("");
+  const [openCats, setOpenCats] = useState(new Set());
+
+  const isSearching = query.trim().length > 0;
+  const selectedIds = selectedDiagnoses.map(d => d.id);
+
+  const filtered = isSearching
+    ? diagnoses.filter(d => d.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : diagnoses;
+
+  const grouped = filtered.reduce((acc, d) => {
+    const cat = d.category || "Other";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(d);
+    return acc;
+  }, {});
+
+  const orderedCats = DIAGNOSIS_CATEGORY_ORDER.filter(c => grouped[c]);
+
+  const toggleCat = (cat) => {
+    setOpenCats(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const isCatOpen = (cat) => isSearching || openCats.has(cat);
+
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
-      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 12 }}>Select your diagnosis</div>
-      {groups.map(g => (
-        <div key={g.group} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{g.group}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {g.dx.map(d => {
-              const done = attempted.includes(d.id);
-              return (
-                <button key={d.id} onClick={() => onDiagnose(d)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-info)" : "var(--color-background-primary)", fontSize: 13, color: "var(--color-text-primary)", fontWeight: done ? 500 : 400 }}>
-                  <span>{d.label}</span>
-                  {done && <span style={{ fontSize: 11, color: "var(--color-text-info)" }}>✓</span>}
-                </button>
-              );
-            })}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ padding: "10px 1rem 6px", flexShrink: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 8 }}>Select your diagnosis</div>
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search conditions…"
+          style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", boxSizing: "border-box" }}
+        />
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 1rem 1rem" }}>
+        {orderedCats.length === 0 && (
+          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", padding: "12px 0" }}>No matching conditions.</div>
+        )}
+        {orderedCats.map(cat => {
+          const items = grouped[cat];
+          const open = isCatOpen(cat);
+          const doneCount = items.filter(d => attempted.includes(d.id)).length;
+          const selCount = items.filter(d => selectedIds.includes(d.id)).length;
+          return (
+            <div key={cat} style={{ marginBottom: 6 }}>
+              <button
+                onClick={() => !isSearching && toggleCat(cat)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "7px 10px",
+                  background: "var(--color-background-secondary)",
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  borderRadius: open ? "var(--border-radius-md) var(--border-radius-md) 0 0" : "var(--border-radius-md)",
+                  cursor: isSearching ? "default" : "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{cat}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {selCount > 0 && <span style={{ fontSize: 10, color: "var(--color-text-info)", fontWeight: 600 }}>● {selCount}</span>}
+                  {doneCount > 0 && <span style={{ fontSize: 10, color: "var(--color-text-success, #16a34a)" }}>✓ {doneCount}</span>}
+                  <span style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>{items.length}</span>
+                  {!isSearching && <span style={{ fontSize: 10, color: "var(--color-text-secondary)", marginLeft: 2 }}>{open ? "▲" : "▼"}</span>}
+                </div>
+              </button>
+              {open && (
+                <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderTop: "none", borderRadius: "0 0 var(--border-radius-md) var(--border-radius-md)", overflow: "hidden" }}>
+                  {items.map((d, i) => {
+                    const done = attempted.includes(d.id);
+                    const selected = selectedIds.includes(d.id);
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => onSelect(d)}
+                        style={{
+                          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "8px 12px",
+                          borderBottom: i < items.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none",
+                          border: "none",
+                          borderBottomWidth: i < items.length - 1 ? "0.5px" : 0,
+                          borderBottomStyle: "solid",
+                          borderBottomColor: "var(--color-border-tertiary)",
+                          cursor: "pointer", textAlign: "left",
+                          background: selected
+                            ? "var(--color-background-info)"
+                            : done ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
+                          fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected || done ? 500 : 400,
+                        }}
+                      >
+                        <span>{d.label}</span>
+                        <span style={{ fontSize: 11, color: selected ? "var(--color-text-info)" : "var(--color-text-success, #16a34a)", flexShrink: 0 }}>
+                          {selected ? "✓ Selected" : done ? "✓ Confirmed" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Confirm button — active when at least one condition selected */}
+      <div style={{ flexShrink: 0, padding: "10px 1rem", borderTop: "0.5px solid var(--color-border-tertiary)" }}>
+        {selectedDiagnoses.length > 0 && (
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 6 }}>
+            Selected: {selectedDiagnoses.map(d => d.label).join(", ")}
           </div>
-        </div>
-      ))}
+        )}
+        <button
+          onClick={() => selectedDiagnoses.length > 0 && onConfirm(selectedDiagnoses)}
+          disabled={selectedDiagnoses.length === 0}
+          style={{
+            width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none",
+            cursor: selectedDiagnoses.length === 0 ? "not-allowed" : "pointer",
+            background: selectedDiagnoses.length === 0 ? "var(--color-background-tertiary)" : "#185FA5",
+            color: selectedDiagnoses.length === 0 ? "var(--color-text-secondary)" : "#fff",
+            fontSize: 13, fontWeight: 500,
+          }}
+        >
+          {selectedDiagnoses.length === 0 ? "Select at least one diagnosis" : `Confirm Diagnosis (${selectedDiagnoses.length})`}
+        </button>
+      </div>
     </div>
   );
 }
 
-function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle, onSubmit, loading }) {
-  const grouped = groupActionsByType(allActions);
-  const totalCost = selectedActionIds.reduce((sum, id) => {
+function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle, onSubmit, onDirectSubmit, onFinalize, pendingTreatments = [], loading, tabId }) {
+  const visibleActions = tabId === "treat_clinic"
+    ? allActions.filter(a => a.type === "injectable" || a.type === "intervention")
+    : allActions.filter(a => a.type === "oral" || a.type === "topical");
+  const grouped = groupActionsByType(visibleActions);
+
+  // Only "both" actions can be batch-selected; "clinic" actions submit immediately on click
+  const batchSelectedIds = selectedActionIds.filter(id => {
     const a = allActions.find(x => x.id === id);
-    return sum + (a ? a.cost : 0);
-  }, 0);
+    return a && a.setting === "both";
+  });
 
   if (!actionsLoaded) {
     return (
@@ -593,52 +732,162 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
     );
   }
 
+  const hasBatchActions = visibleActions.some(a => a.setting === "both");
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
       <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>Select treatments</div>
-      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>Choose all that apply — reason from mechanism, not drug name.</div>
+      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>Reason from mechanism, not drug name.</div>
 
       {ACTION_TYPE_ORDER.filter(t => grouped[t]?.length).map(type => (
         <div key={type} style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{ACTION_TYPE_LABELS[type]}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {grouped[type].map(action => {
-              const selected = selectedActionIds.includes(action.id);
-              return (
-                <label key={action.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: selected ? "0.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", background: selected ? "var(--color-background-info)" : "var(--color-background-primary)", transition: "background 0.15s" }}>
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => onToggle(action.id)}
-                    style={{ marginTop: 2, flexShrink: 0, accentColor: "var(--color-text-info)" }}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected ? 500 : 400 }}>{action.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
-                      {action.hidden_role.replace(/_/g, " ")} · ${action.cost}
+              if (action.setting === "clinic") {
+                // Single-click adds to the treatment plan; game does not end until Finalize.
+                const isApplied = pendingTreatments.includes(action.id);
+                return (
+                  <button
+                    key={action.id}
+                    onClick={() => !loading && onDirectSubmit(action.id)}
+                    disabled={loading}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "9px 12px", borderRadius: "var(--border-radius-md)",
+                      border: isApplied ? "0.5px solid var(--color-border-success, #6ee7b7)" : "0.5px solid var(--color-border-secondary)",
+                      cursor: loading ? "not-allowed" : "pointer", textAlign: "left",
+                      background: isApplied ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
+                      opacity: loading ? 0.6 : 1, width: "100%",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{action.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
                     </div>
-                  </div>
-                </label>
-              );
+                    <span style={{ fontSize: 10, color: isApplied ? "var(--color-text-success, #16a34a)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{isApplied ? "✓ Applied" : "Apply"}</span>
+                  </button>
+                );
+              } else {
+                // Batch checkbox flow for "both" actions
+                const selected = selectedActionIds.includes(action.id);
+                return (
+                  <label key={action.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: selected ? "0.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", background: selected ? "var(--color-background-info)" : "var(--color-background-primary)", transition: "background 0.15s" }}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => onToggle(action.id)}
+                      style={{ marginTop: 2, flexShrink: 0, accentColor: "var(--color-text-info)" }}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected ? 500 : 400 }}>{action.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
+                    </div>
+                  </label>
+                );
+              }
             })}
           </div>
         </div>
       ))}
 
-      <div style={{ paddingTop: 12, borderTop: "0.5px solid var(--color-border-tertiary)" }}>
-        {selectedActionIds.length > 0 && (
+      {tabId === "treat_clinic" && pendingTreatments.length > 0 && (
+        <div style={{ paddingTop: 12, borderTop: "0.5px solid var(--color-border-tertiary)" }}>
           <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
-            {selectedActionIds.length} selected · estimated cost ${totalCost}
+            {pendingTreatments.length} treatment{pendingTreatments.length > 1 ? "s" : ""} applied. Add more or finalize.
           </div>
-        )}
-        <button
-          onClick={onSubmit}
-          disabled={loading || selectedActionIds.length === 0}
-          style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: selectedActionIds.length === 0 || loading ? "not-allowed" : "pointer", background: selectedActionIds.length === 0 ? "var(--color-background-tertiary)" : "#A32D2D", color: selectedActionIds.length === 0 ? "var(--color-text-secondary)" : "#fff", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
-        >
-          {selectedActionIds.length === 0 ? "Select at least one treatment" : "Complete Treatment"}
-        </button>
+          <button
+            onClick={onFinalize}
+            disabled={loading}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: loading ? "not-allowed" : "pointer", background: "#A32D2D", color: "#fff", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
+          >
+            Finalize Treatment Plan
+          </button>
+        </div>
+      )}
+
+      {hasBatchActions && (
+        <div style={{ paddingTop: 12, borderTop: "0.5px solid var(--color-border-tertiary)" }}>
+          {batchSelectedIds.length > 0 && (
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+              {batchSelectedIds.length} selected
+            </div>
+          )}
+          <button
+            onClick={onSubmit}
+            disabled={loading || batchSelectedIds.length === 0}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: batchSelectedIds.length === 0 || loading ? "not-allowed" : "pointer", background: batchSelectedIds.length === 0 ? "var(--color-background-tertiary)" : "#A32D2D", color: batchSelectedIds.length === 0 ? "var(--color-text-secondary)" : "#fff", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
+          >
+            {batchSelectedIds.length === 0 ? "Select at least one prescription" : "Complete Prescription"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, loading }) {
+  const [confirmPending, setConfirmPending] = useState(false);
+
+  const handleSelect = (action) => {
+    if (selected === action.id) {
+      onSelect(null);
+      setConfirmPending(false);
+    } else {
+      onSelect(action.id);
+      setConfirmPending(true);
+    }
+  };
+
+  const handleConfirm = () => {
+    setConfirmPending(false);
+    onConfirm(selected);
+  };
+
+  const handleCancel = () => {
+    onSelect(null);
+    setConfirmPending(false);
+  };
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>Disposition</div>
+      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, padding: "8px 10px", background: "var(--color-background-warning, #fffbeb)", border: "0.5px solid var(--color-border-warning, #fcd34d)", borderRadius: "var(--border-radius-md)" }}>
+        Select after completing treatment. This will end the consultation.
       </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {dispositionActions.map(action => {
+          const isSelected = selected === action.id;
+          return (
+            <button
+              key={action.id}
+              onClick={() => handleSelect(action)}
+              disabled={loading}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "11px 14px", borderRadius: "var(--border-radius-md)", textAlign: "left", width: "100%",
+                border: isSelected ? "1.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)",
+                background: isSelected ? "var(--color-background-info)" : "var(--color-background-primary)",
+                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: isSelected ? 500 : 400 }}>{action.name}</div>
+              </div>
+              {isSelected && <span style={{ fontSize: 11, color: "var(--color-text-info)", flexShrink: 0, marginLeft: 8 }}>Selected</span>}
+            </button>
+          );
+        })}
+      </div>
+      {confirmPending && selected && (
+        <div style={{ marginTop: 16, padding: "12px 14px", background: "var(--color-background-danger, #fef2f2)", border: "0.5px solid var(--color-border-danger, #fca5a5)", borderRadius: "var(--border-radius-md)" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-danger, #b91c1c)", fontWeight: 500, marginBottom: 10 }}>This will end the consultation. Are you sure?</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={handleCancel} style={{ flex: 1, padding: "8px 12px", fontSize: 13, borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", cursor: "pointer", color: "var(--color-text-secondary)" }}>Cancel</button>
+            <button onClick={handleConfirm} disabled={loading} style={{ flex: 1, padding: "8px 12px", fontSize: 13, fontWeight: 500, borderRadius: "var(--border-radius-md)", border: "none", background: "#A32D2D", color: "#fff", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>Confirm — End consultation</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -869,16 +1118,492 @@ function PatientCard({ sessionData, onBegin, onBack }) {
   );
 }
 
+// ─── Lab report renderer helpers ───────────────────────────────────────────
+function getLabSectionHeader(key) {
+  if (!key) return "CHEMISTRY";
+  const k = key.toLowerCase();
+  if (k.includes("cbc") || k.includes("pcv") || k.includes("hematol") || k === "blood_count") return "HEMATOLOGY";
+  if (k.includes("urine") || k.includes("urinalys")) return "URINALYSIS";
+  return "CHEMISTRY";
+}
+
+function getLabFlag(value, low, high) {
+  if (value > high) return "H";
+  if (value < low) return "L";
+  return null;
+}
+
+function getLabTickPos(value, low, high) {
+  // Bar is 60 px wide; tick is 6 px wide → usable range is 0–54 px
+  if (value <= low) return 0;
+  if (value >= high) return 54;
+  return Math.round(((value - low) / (high - low)) * 54);
+}
+
+// ─── LabReportRenderer ──────────────────────────────────────────────────────
+// Renders inside DiagnosticResultModal when display_type === "report".
+// Props:
+//   testKey       – e.g. "lactate", "cbc", "biochemistry_panel"
+//   testData      – full test entry from case JSON (contains reference_ranges)
+//   patient       – { name, breed, age, sex, weight_kg }
+//   ownerName     – client name string
+//   caseId        – e.g. "gdv_001"
+function LabReportRenderer({ testKey, testData, patient, ownerName, caseId }) {
+  const referenceRanges = testData?.reference_ranges || {};
+  const entries = Object.entries(referenceRanges);
+  const sectionHeader = getLabSectionHeader(testKey);
+
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: 12, color: "#111" }}>
+
+      {/* Section header */}
+      <div style={{ padding: "2px 0 10px", fontSize: 15, fontWeight: 700, letterSpacing: "0.04em" }}>
+        {sectionHeader}
+      </div>
+
+      {/* ── RESULTS TABLE ── */}
+      <div style={{ padding: 0 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #e0e0e0" }}>
+          <thead>
+            <tr style={{ background: "#f0f0f0" }}>
+              <th style={{ padding: "7px 10px", textAlign: "left", fontWeight: 700, fontSize: 11, textTransform: "uppercase", border: "1px solid #e0e0e0", width: "34%" }}>TEST</th>
+              <th style={{ padding: "7px 10px", textAlign: "left", fontWeight: 700, fontSize: 11, textTransform: "uppercase", border: "1px solid #e0e0e0", width: "18%" }}>RESULT</th>
+              <th style={{ padding: "7px 10px", textAlign: "left", fontWeight: 700, fontSize: 11, textTransform: "uppercase", border: "1px solid #e0e0e0" }}>REF. RANGE / UNITS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([analyte, d], idx) => {
+              const flag = getLabFlag(d.value, d.low, d.high);
+              const isFlagged = flag !== null;
+              const tickPos = getLabTickPos(d.value, d.low, d.high);
+              const rowBg = idx % 2 === 0 ? "#fff" : "#f9f9f9";
+              const isPCV = analyte.toLowerCase().includes("pcv");
+              const pcvPct = Math.max(0, Math.min(100, Number(d.value) || 0));
+              return (
+                <tr key={analyte} style={{ background: rowBg }}>
+
+                  {/* TEST — H / L prefix when flagged */}
+                  <td style={{ padding: "6px 10px", border: "1px solid #e0e0e0", fontWeight: isFlagged ? 700 : 400, fontSize: 12, verticalAlign: "middle" }}>
+                    {flag && <span style={{ fontWeight: 700, marginRight: 5 }}>{flag}</span>}
+                    {analyte.replace(/_/g, " ")}
+                  </td>
+
+                  {/* RESULT — plain numeric, bold when flagged */}
+                  <td style={{ padding: "6px 10px", border: "1px solid #e0e0e0", fontWeight: isFlagged ? 700 : 400, fontSize: 12, verticalAlign: "middle" }}>
+                    {d.value}
+                  </td>
+
+                  {/* REF. RANGE / UNITS — range text + graphical bar indicator */}
+                  <td style={{ padding: "6px 10px", border: "1px solid #e0e0e0", fontSize: 12, verticalAlign: "middle" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap" }}>
+                      <span>({d.low} &ndash; {d.high}) {d.unit}</span>
+                      {/* Graphical position bar */}
+                      <div style={{
+                        width: 60,
+                        height: 6,
+                        background: "#e0e0e0",
+                        borderRadius: 2,
+                        position: "relative",
+                        flexShrink: 0,
+                      }}>
+                        {/* Tick mark — positioned proportionally within the bar */}
+                        <div style={{
+                          position: "absolute",
+                          left: tickPos,
+                          top: 0,
+                          width: 6,
+                          height: 6,
+                          background: "#333",
+                          borderRadius: 1,
+                        }} />
+                      </div>
+
+                      {/* PCV haematocrit tube — only on the PCV analyte row */}
+                      {isPCV && (
+                        <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", marginLeft: 12, flexShrink: 0 }}>
+                          <div style={{ width: 12, height: 60, border: "1px solid #000", position: "relative", background: "#fdfaf0", overflow: "hidden" }}>
+                            {/* Bottom: packed red cells — height proportional to PCV% */}
+                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `${pcvPct}%`, background: "#c0392b" }} />
+                            {/* Buffy coat — thin pale-yellow layer sitting on the red cell column */}
+                            <div style={{ position: "absolute", bottom: `${pcvPct}%`, left: 0, right: 0, height: 3, background: "#f5f0d0" }} />
+                          </div>
+                          <span style={{ fontSize: 10, color: "#888", marginTop: 2 }}>PCV</span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Report shell + renderer helpers ────────────────────────────────────────
+function todayDDMMYYYY() {
+  const t = new Date();
+  const p = n => String(n).padStart(2, "0");
+  return `${p(t.getDate())}/${p(t.getMonth() + 1)}/${t.getFullYear()}`;
+}
+
+function randDigits(n) {
+  let s = "";
+  for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+function abbrSex(sex) {
+  const u = (sex || "").toUpperCase();
+  if (u.includes("FEMALE")) return "F";
+  if (u.includes("MALE")) return "M";
+  return sex || "—";
+}
+
+// Image with graceful fallback to an "Image pending" placeholder.
+function DiagImage({ asset, alt }) {
+  const [err, setErr] = useState(false);
+  if (err || !asset) {
+    return (
+      <div style={{ width: "100%", height: 200, background: "#eee", border: "1px solid #d0d0d0", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 13 }}>
+        Image pending
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`/assets/diagnostic_images/${asset}`}
+      alt={alt || "diagnostic image"}
+      onError={() => setErr(true)}
+      style={{ maxWidth: "100%", display: "block", border: "1px solid #d0d0d0" }}
+    />
+  );
+}
+
+// ─── SIMLABReportShell — external lab report chrome ─────────────────────────
+function SIMLABReportShell({ testKey, patient, ownerName, caseId, children }) {
+  const ids = useMemo(() => ({
+    patientId: `${(caseId || "CASE").toUpperCase()}-${randDigits(4)}`,
+    labId: randDigits(10),
+    orderId: randDigits(9),
+  }), [caseId]);
+  const dateStr = useMemo(() => todayDDMMYYYY(), []);
+  const grey = "#777";
+  const cell = { fontSize: 11, lineHeight: 1.6 };
+  return (
+    <div style={{ maxWidth: 700, margin: "0 auto", background: "#fff", fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ display: "flex", padding: "16px 18px 12px", gap: 16 }}>
+        {/* Zone 1 — branding */}
+        <div style={{ flex: "1 1 0", minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#1a3a6b" }}>SIMLAB</div>
+          <div style={{ fontSize: 10, color: grey }}>Veterinary Reference Laboratory</div>
+          <div style={{ fontSize: 10, color: grey }}>www.simlab.vet</div>
+        </div>
+        {/* Zone 2 — patient */}
+        <div style={{ flex: "1 1 0", minWidth: 0, ...cell }}>
+          <div>PET NAME: {(patient?.name || "—").toUpperCase()}</div>
+          <div>PATIENT ID: {ids.patientId}</div>
+          <div>SPECIES: CANINE</div>
+          <div>BREED: {(patient?.breed || "—").toUpperCase()}</div>
+          <div>GENDER: {(patient?.sex || "—").toUpperCase()}</div>
+          <div>AGE: {patient?.age != null ? `${patient.age}Y` : "—"}</div>
+        </div>
+        {/* Zone 3 — clinic */}
+        <div style={{ flex: "1 1 0", minWidth: 0, ...cell }}>
+          <div>VETSIM ANIMAL HOSPITAL</div>
+          <div>123 CLINIC LANE, VETTOWN VS1 0AB</div>
+          <div>TEL: 555-0100</div>
+          <div>ACCOUNT #: VS-001</div>
+          <div>ATTENDING VET: DR. STUDENT</div>
+        </div>
+        {/* Zone 4 — dates */}
+        <div style={{ flex: "1 1 0", minWidth: 0, ...cell }}>
+          <div>LAB ID #: <strong>{ids.labId}</strong></div>
+          <div>ORDER ID #: <strong>{ids.orderId}</strong></div>
+          <div>COLLECTION DATE: <strong>{dateStr}</strong></div>
+          <div>DATE OF RECEIPT: <strong>{dateStr}</strong></div>
+          <div>DATE OF REPORT: <strong>{dateStr}</strong></div>
+          <div style={{ marginTop: 4 }}><strong>*** FINAL REPORT ***</strong></div>
+        </div>
+      </div>
+      <div style={{ height: 2, background: "#333", margin: "0 18px" }} />
+      <div style={{ padding: "6px 18px 2px", fontSize: 11, fontWeight: 700 }}>
+        SIMLAB SERVICES: {(testKey || "DIAGNOSTIC").toUpperCase()}
+      </div>
+      <div style={{ padding: "10px 18px 16px" }}>{children}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "8px 18px 16px", borderTop: "1px solid #e0e0e0" }}>
+        <div style={{ fontSize: 10, fontStyle: "italic", color: grey }}>For complete access to this patient's results, login to portal.simlab.vet</div>
+        <div style={{ fontSize: 10, color: grey, marginLeft: 16, flexShrink: 0 }}>PAGE 1 OF 1</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── InHouseReportShell — point-of-care record chrome ───────────────────────
+function InHouseReportShell({ testLabel, patient, children }) {
+  const dateStr = useMemo(() => todayDDMMYYYY(), []);
+  const recordId = useMemo(() => `IH-${randDigits(6)}`, []);
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto", background: "#fff", fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ padding: "16px 18px 0" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#1a3a6b" }}>VETSIM ANIMAL HOSPITAL</div>
+        <div style={{ fontSize: 12, color: "#777" }}>In-House Diagnostic Record</div>
+      </div>
+      <div style={{ height: 1, background: "#e0e0e0", margin: "10px 18px" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0 18px", fontSize: 12, lineHeight: 1.6 }}>
+        <div>Patient: {patient?.name || "—"} | Breed: {patient?.breed || "—"} | Age: {patient?.age != null ? `${patient.age}Y` : "—"} | Sex: {abbrSex(patient?.sex)}</div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>Date: {dateStr} | Attending: Dr. Student | Record #: {recordId}</div>
+      </div>
+      <div style={{ height: 2, background: "#333", margin: "10px 18px" }} />
+      <div style={{ padding: "0 18px" }}>
+        <div style={{ fontSize: 14, fontWeight: 700 }}>{testLabel || "Diagnostic Test"}</div>
+        <div style={{ height: 1, background: "#e0e0e0", margin: "8px 0" }} />
+      </div>
+      <div style={{ padding: "4px 18px 14px" }}>{children}</div>
+      <div style={{ padding: "8px 18px 16px", borderTop: "1px solid #e0e0e0", fontSize: 10, fontStyle: "italic", color: "#777" }}>
+        Vetsim Animal Hospital — In-house clinical record
+      </div>
+    </div>
+  );
+}
+
+// ─── ImageRenderer ──────────────────────────────────────────────────────────
+const IMAGE_SUBTITLES = {
+  skin_cytology: "Tape prep — Diff-Quik stain — 100x oil immersion",
+  ear_cytology: "Ear swab — Diff-Quik stain — 100x oil immersion",
+  xray_abdomen: "Abdominal radiograph — right lateral view",
+  allergy_intradermal: "Intradermal skin test — lateral thorax",
+};
+
+function ImageRenderer({ testKey, testLabel, testData }) {
+  const subtitle = IMAGE_SUBTITLES[testKey] || testLabel || "";
+  const { image_asset, image_attribution, second_image_asset, second_image_attribution, result_text } = testData || {};
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      {subtitle && <div style={{ fontSize: 12, color: "#777", marginBottom: 8 }}>{subtitle}</div>}
+      <DiagImage asset={image_asset} alt={testLabel} />
+      {second_image_asset && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Additional view</div>
+          <DiagImage asset={second_image_asset} alt={`${testLabel} additional view`} />
+        </div>
+      )}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>CLINICAL FINDINGS:</div>
+        <div style={{ fontSize: 13, lineHeight: 1.6 }}>{result_text}</div>
+      </div>
+      {image_attribution && <div style={{ fontSize: 10, fontStyle: "italic", color: "#888", marginTop: 10 }}>Image: {image_attribution}</div>}
+      {second_image_attribution && <div style={{ fontSize: 10, fontStyle: "italic", color: "#888", marginTop: 2 }}>Image: {second_image_attribution}</div>}
+    </div>
+  );
+}
+
+// ─── ECGRenderer ──────────────────────────────────────────────────────────
+function ECGRenderer({ testData }) {
+  const canvasRef = useRef(null);
+  const wf = testData?.waveform_data || {};
+  const hr = wf.heart_rate || 120;
+  const vpcPresent = !!wf.vpc_present;
+  const vpcFreq = wf.vpc_frequency || 0;
+  const rhythm = (wf.rhythm || "").toUpperCase() === "IRREGULAR" ? "IRREGULAR" : "REGULAR";
+  const photoAsset = wf.image_asset || testData?.image_asset || null;
+  const photoAttr = wf.image_attribution || testData?.image_attribution || null;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W = 660, H = 160;
+    ctx.clearRect(0, 0, W, H);
+    // ECG paper grid
+    ctx.strokeStyle = "#ffcccc"; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 10) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = "#ff9999"; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // Trace
+    ctx.strokeStyle = "#111"; ctx.lineWidth = 1.6; ctx.lineJoin = "round";
+    const base = 100;
+    ctx.beginPath();
+    ctx.moveTo(0, base);
+    // Calibration pulse — 20px vertical step at far left
+    ctx.lineTo(8, base);
+    ctx.lineTo(8, base - 20);
+    ctx.lineTo(18, base - 20);
+    ctx.lineTo(18, base);
+    let x = 42;
+    ctx.lineTo(x, base);
+    const dx = 70;
+    const vpcEvery = vpcPresent ? Math.max(3, Math.min(5, Math.round(hr / Math.max(1, vpcFreq)))) : Infinity;
+    let beat = 0;
+    while (x < W - 60) {
+      const isVpc = vpcPresent && beat > 0 && beat % vpcEvery === 0;
+      if (isVpc) {
+        // No preceding P; wide bizarre QRS (20px), tall (80px); opposite-polarity T
+        ctx.lineTo(x + 5, base);
+        ctx.lineTo(x + 15, base - 80);
+        ctx.lineTo(x + 25, base + 30);
+        ctx.lineTo(x + 30, base);
+        ctx.lineTo(x + 42, base + 18);
+        ctx.lineTo(x + 54, base);
+        x += dx + 30; // compensatory pause
+      } else {
+        ctx.lineTo(x + 6, base);        // P wave
+        ctx.lineTo(x + 12, base - 8);
+        ctx.lineTo(x + 18, base);
+        ctx.lineTo(x + 23, base + 6);   // Q
+        ctx.lineTo(x + 28, base - 50);  // R
+        ctx.lineTo(x + 33, base + 12);  // S
+        ctx.lineTo(x + 38, base);
+        ctx.lineTo(x + 48, base - 14);  // T wave
+        ctx.lineTo(x + 58, base);
+        x += dx;
+      }
+      beat++;
+    }
+    ctx.lineTo(W, base);
+    ctx.stroke();
+  }, [hr, vpcPresent, vpcFreq]);
+
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase" }}>Electrocardiography</div>
+      <div style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>Lead II — 25 mm/sec — 10 mm/mV</div>
+      {photoAsset && (
+        <div style={{ marginBottom: 12 }}>
+          <DiagImage asset={photoAsset} alt="ECG trace" />
+          {photoAttr && <div style={{ fontSize: 10, fontStyle: "italic", color: "#888", marginTop: 4 }}>{photoAttr}</div>}
+        </div>
+      )}
+      <canvas ref={canvasRef} width={660} height={160} style={{ width: "100%", maxWidth: 660, border: "1px solid #d0d0d0", display: "block" }} />
+      <div style={{ fontFamily: "monospace", background: "#1a1a1a", color: "#00cc00", padding: 12, marginTop: 12, fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ whiteSpace: "pre" }}>{`HEART RATE:     ${hr} bpm\nRHYTHM:         ${rhythm}\nVPC FREQUENCY:  ${vpcFreq} per minute`}</div>
+        {vpcPresent && <div style={{ color: "#ffff00", marginTop: 6 }}>*** VENTRICULAR ECTOPY DETECTED ***</div>}
+      </div>
+      <div style={{ fontSize: 12, marginTop: 10, lineHeight: 1.6 }}>
+        Rhythm interpretation is the responsibility of the attending clinician. This trace requires evaluation before anaesthesia.
+      </div>
+    </div>
+  );
+}
+
+// ─── TextRenderer ──────────────────────────────────────────────────────────
+const EVIDENCE_LABELS = {
+  confirmatory: { text: "[CONFIRMATORY]", color: "#1a7a1a" },
+  supportive: { text: "[SUPPORTIVE]", color: "#1a3a8a" },
+  ruling_out: { text: "[RULES OUT]", color: "#b05000" },
+};
+
+function TextRenderer({ testKey, testLabel, testData, patient }) {
+  const pd = testData?.procedure_details;
+  const resultText = testData?.result_text || "";
+  const interpretation = testData?.interpretation;
+  const findings = testData?.findings;
+  const dateStr = useMemo(() => todayDDMMYYYY(), []);
+  const ageSex = `${patient?.age != null ? patient.age + " yr" : "—"} | ${abbrSex(patient?.sex)}`;
+  const mono = { fontFamily: "monospace", fontSize: 12, lineHeight: 1.7, color: "#222" };
+  const Divider = () => <div style={{ height: 1, background: "#cccccc", margin: "10px 0" }} />;
+
+  return (
+    <div>
+      {pd ? (
+        <div style={mono}>
+          <Divider />
+          <div style={{ fontWeight: 700 }}>DIAGNOSTIC TEST RESULT</div>
+          <Divider />
+          <div>Patient:    {patient?.name || "—"}</div>
+          <div>Species:    Canine | Breed: {patient?.breed || "—"}</div>
+          <div>Age/Sex:    {ageSex}</div>
+          <div>Test:       {testLabel || testKey}</div>
+          <div>Sites:      {pd.sites}</div>
+          <div>Method:     {pd.method}</div>
+          <div>Stain:      {pd.stain}</div>
+          <div>Mag:        {pd.magnification}</div>
+          <Divider />
+          <div style={{ fontWeight: 700 }}>FINDINGS</div>
+          <div>{resultText}</div>
+          <Divider />
+          <div style={{ fontWeight: 700 }}>INTERPRETATION</div>
+          <div>{interpretation || "—"}</div>
+          <Divider />
+          <div>Performed by:  Dr. Student</div>
+          <div>Date:          {dateStr}</div>
+          <Divider />
+        </div>
+      ) : (
+        <div style={{ background: "#fafafa", border: "1px solid #e0e0e0", padding: 16, fontFamily: "Arial, Helvetica, sans-serif", fontSize: 13, lineHeight: 1.6, color: "#333" }}>
+          {resultText}
+        </div>
+      )}
+      {Array.isArray(findings) && findings.length > 0 && (
+        <div style={{ fontFamily: "Arial, Helvetica, sans-serif", marginTop: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>FINDINGS SUMMARY:</div>
+          {findings.map((f, i) => {
+            const lab = EVIDENCE_LABELS[f.evidence_type];
+            return (
+              <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 3 }}>
+                • {f.observation}
+                {lab && <span style={{ color: lab.color, fontWeight: 700 }}> — {lab.text}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── DiagnosticResultModal ──────────────────────────────────────────────────
+function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, caseId, onClose }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !testData) return null;
+
+  const displayType = testData.display_type || "text";
+  const reportFormat = testData.report_format;
+  const testLabel = testData.label || testKey;
+
+  let inner;
+  if (displayType === "report") inner = <LabReportRenderer testKey={testKey} testData={testData} patient={patient} ownerName={ownerName} caseId={caseId} />;
+  else if (displayType === "image") inner = <ImageRenderer testKey={testKey} testLabel={testLabel} testData={testData} />;
+  else if (displayType === "waveform") inner = <ECGRenderer testData={testData} />;
+  else inner = <TextRenderer testKey={testKey} testLabel={testLabel} testData={testData} patient={patient} />;
+
+  const shell = reportFormat === "inhouse"
+    ? <InHouseReportShell testLabel={testLabel} patient={patient}>{inner}</InHouseReportShell>
+    : <SIMLABReportShell testKey={testKey} patient={patient} ownerName={ownerName} caseId={caseId}>{inner}</SIMLABReportShell>;
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <button onClick={onClose} style={{ position: "fixed", top: 12, right: 16, background: "transparent", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", lineHeight: 1, zIndex: 1001 }}>×</button>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", maxWidth: 720, width: "100%", maxHeight: "90vh", overflowY: "auto", borderRadius: 0 }}>
+        {shell}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
-  { id: "ask", label: "Ask questions" },
-  { id: "exam", label: "Physical exam" },
-  { id: "diag", label: "Run diagnostics" },
-  { id: "dx", label: "Make diagnosis" },
-  { id: "treat", label: "Start treatment" },
+  { id: "ask",          label: "Ask questions"        },
+  { id: "exam",         label: "Physical exam"         },
+  { id: "diag",         label: "Run diagnostics"       },
+  { id: "dx",           label: "Make diagnosis"        },
+  { id: "treat_clinic", label: "In-Clinic Treatments"  },
+  { id: "treat_rx",     label: "Prescriptions"         },
+  { id: "disposition",  label: "Disposition"           },
 ];
 
 function initState() {
-  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: "ask", examFindings: [], testsRun: [], testResults: {}, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], diagnosisAttempted: [] };
+  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: "ask", examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], dispositionSelected: null, dispositionConfirmPending: false };
 }
 
 export default function App() {
@@ -889,13 +1614,32 @@ export default function App() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [s.messages]);
 
   useEffect(() => {
-    fetch(`${API}/actions`)
-      .then(r => r.json())
-      .then(data => patch({ allActions: data.actions || [], actionsLoaded: true }))
-      .catch(() => patch({ actionsLoaded: true }));
+    Promise.all([
+      fetch(`${API}/actions`).then(r => r.json()),
+      fetch(`${API}/diagnostics`).then(r => r.json()),
+      fetch(`${API}/diagnoses`).then(r => r.json()),
+    ]).then(([actData, diagData, dxData]) => {
+      patch({
+        allActions: actData.actions || [],
+        actionsLoaded: true,
+        allDiagnostics: diagData.diagnostics || [],
+        allDiagnoses: dxData.diagnoses || [],
+      });
+    }).catch(err => {
+      console.error("Failed to load reference data:", err);
+      patch({ actionsLoaded: true });
+    });
   }, []);
 
   function patch(obj) { setS(prev => ({ ...prev, ...obj })); }
+
+  function openDiagnosticModal(testKey) {
+    const testData = s.testResultsData[testKey];
+    if (testData) patch({ diagnosticModal: { open: true, testKey, testData } });
+  }
+  function closeDiagnosticModal() {
+    patch({ diagnosticModal: { open: false, testKey: null, testData: null } });
+  }
 
   async function selectCase(caseId) {
     patch({ error: null, loading: true, caseId });
@@ -908,33 +1652,69 @@ export default function App() {
   }
 
   function beginConsultation() {
-    const d = s.sessionData;
-    patch({
-      screen: "chat", activeTab: "ask",
-      messages: [{ id: Date.now(), role: "narrator", speaker: "narrator", text: `Case loaded: ${d.state.case.title}. Patient: ${d.state.case.patient.name}, ${d.state.case.patient.breed}. Presenting complaint: ${d.state.case.presenting_complaint}.`, effects: [] }]
+    patch({ screen: "chat", activeTab: "ask", messages: [] });
+  }
+
+  function tryInterceptDiagnosis(text) {
+    const triggerRe = /(?:i think|i suspect|i believe|could (?:this|it) be|this is|this looks like|diagnose:)\s+/i;
+    if (!triggerRe.test(text)) return false;
+    const after = text.replace(triggerRe, "").replace(/^(?:a|an|the)\s+/i, "").replace(/[.?!,;]+$/, "").trim();
+    if (after.length < 4) return false;
+    const lower = after.toLowerCase();
+    const match = s.allDiagnoses.find(d => {
+      const dlower = d.label.toLowerCase();
+      return dlower.includes(lower) || lower.includes(dlower);
     });
+    if (!match) return false;
+    const alreadySelected = s.selectedDiagnoses.some(d => d.id === match.id);
+    const newSelected = alreadySelected ? s.selectedDiagnoses : [...s.selectedDiagnoses, match];
+    const systemMsg = { id: Date.now(), role: "narrator", speaker: "narrator", text: `Found in differentials: ${match.label} — confirm in the Make diagnosis tab`, effects: [] };
+    setS(prev => ({
+      ...prev,
+      input: "",
+      messages: [...prev.messages, { id: Date.now() - 1, role: "player", text }, systemMsg],
+      selectedDiagnoses: newSelected,
+      activeTab: "dx",
+    }));
+    return true;
   }
 
   async function send(text) {
     if (!text || s.loading || !s.sessionId) return;
+    if (tryInterceptDiagnosis(text)) return;
     patch({ input: "", loading: true, error: null });
     setS(prev => ({ ...prev, messages: [...prev.messages, { id: Date.now(), role: "player", text }] }));
     try {
       const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, sessionId: s.sessionId, caseId: s.caseId }) });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
+      const isTest = data.intent === "run_test" && data.data?.testKey;
       const newMsgs = [];
       if (data.reaction) newMsgs.push({ id: Date.now() + 1, role: "reaction", text: data.reaction.dialogue, trustDelta: data.reaction.trustDelta > 0 ? `+${data.reaction.trustDelta}` : `${data.reaction.trustDelta}`, newEmotion: data.reaction.newEmotion });
-      const role = data.speaker === "outcome" ? "outcome" : (data.speaker || "narrator");
-      newMsgs.push({ id: Date.now() + 2, role, speaker: data.speaker, text: data.dialogue || data.message, effects: data.effects || [] });
+      if (isTest) {
+        // Compact chat entry — test name + first sentence of raw findings only.
+        // The full report is shown in the DiagnosticResultModal (Design Rule 2).
+        const rt = data.data.result_text || "";
+        const firstSentence = (rt.split(/(?<=[.!?])\s+/)[0] || rt).trim();
+        newMsgs.push({ id: Date.now() + 2, role: "test_result", testKey: data.data.testKey, testLabel: data.data.label || data.data.testKey, text: firstSentence });
+      } else {
+        const role = data.speaker === "outcome" ? "outcome" : (data.speaker || "narrator");
+        newMsgs.push({ id: Date.now() + 2, role, speaker: data.speaker, text: data.dialogue || data.message, effects: data.effects || [] });
+      }
       const newExamFindings = data.state.knowledge.exam_findings || [];
       const newTestsRun = data.state.knowledge.tests_run || [];
       const resultText = data.dialogue || data.message;
       setS(prev => {
-        const testResults      = { ...prev.testResults };
-        const examResults      = { ...prev.examResults };
-        const examHealthImpacts = { ...prev.examHealthImpacts };
-        if (data.intent === "run_test" && data.data?.testKey) testResults[data.data.testKey] = resultText;
+        const testResults       = { ...prev.testResults };
+        const testResultsData    = { ...prev.testResultsData };
+        const examResults        = { ...prev.examResults };
+        const examHealthImpacts  = { ...prev.examHealthImpacts };
+        let diagnosticModal = prev.diagnosticModal;
+        if (isTest) {
+          testResults[data.data.testKey] = data.data.result_text;
+          testResultsData[data.data.testKey] = data.data;
+          diagnosticModal = { open: true, testKey: data.data.testKey, testData: data.data };
+        }
         if (data.intent === "perform_exam" && data.data?.subtype) {
           examResults[data.data.subtype] = resultText;
           if (examHealthImpacts[data.data.subtype] === undefined) {
@@ -953,6 +1733,8 @@ export default function App() {
           examFindings: newExamFindings,
           testsRun: newTestsRun,
           testResults,
+          testResultsData,
+          diagnosticModal,
           examResults,
           examHealthImpacts,
           loading: false,
@@ -963,11 +1745,12 @@ export default function App() {
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
-  async function sendTreatment(actionIds) {
-    if (!actionIds.length || s.loading || !s.sessionId) return;
+  async function sendTreatment(actionIds, shouldFinalise = false) {
+    if (!actionIds.length && !shouldFinalise) return;
+    if (s.loading || !s.sessionId) return;
     patch({ loading: true, error: null });
     try {
-      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action_ids: actionIds, sessionId: s.sessionId, caseId: s.caseId }) });
+      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action_ids: actionIds, sessionId: s.sessionId, caseId: s.caseId, finalise: shouldFinalise }) });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       const newMsgs = [];
@@ -981,6 +1764,7 @@ export default function App() {
         emotion: data.state.client.emotion,
         actions: data.state.actions_taken,
         selectedActionIds: [],
+        pendingTreatments: data.state.treatment_action_ids || [],
         loading: false,
         ...(data.data?.finalResult ? { screen: "results", finalState: data.state } : {}),
       }));
@@ -989,7 +1773,7 @@ export default function App() {
 
   const emotionColor = { concerned: "var(--color-text-secondary)", frustrated: "var(--color-text-warning)", worried_about_cost: "var(--color-text-warning)", angry: "var(--color-text-danger)" }[s.emotion] || "var(--color-text-secondary)";
 
-  if (s.screen === "results") return <ReportCardScreen finalState={s.finalState} onRetry={() => { const caseId = s.caseId; setS({ ...initState(), allActions: s.allActions, actionsLoaded: s.actionsLoaded, caseId }); selectCase(caseId); }} onNewCase={() => setS(initState())} />;
+  if (s.screen === "results") return <ReportCardScreen finalState={s.finalState} onRetry={() => { const caseId = s.caseId; setS({ ...initState(), allActions: s.allActions, actionsLoaded: s.actionsLoaded, allDiagnostics: s.allDiagnostics, allDiagnoses: s.allDiagnoses, caseId }); selectCase(caseId); }} onNewCase={() => setS({ ...initState(), allActions: s.allActions, actionsLoaded: s.actionsLoaded, allDiagnostics: s.allDiagnostics, allDiagnoses: s.allDiagnoses })} />;
   if (s.screen === "patient") return <PatientCard sessionData={s.sessionData} onBegin={beginConsultation} onBack={() => setS(initState())} />;
 
   if (s.screen === "select") return (
@@ -1030,20 +1814,24 @@ export default function App() {
 
         <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", padding: "2px 8px 4px" }}>Actions</div>
 
-        {TABS.slice(0, 4).map(tab => {
+        {TABS.map(tab => {
           const active = s.activeTab === tab.id;
+          const count = tab.id === "treat_clinic"
+            ? s.selectedActionIds.filter(id => { const a = s.allActions.find(x => x.id === id); return a && (a.type === "injectable" || a.type === "intervention"); }).length
+            : tab.id === "treat_rx"
+            ? s.selectedActionIds.filter(id => { const a = s.allActions.find(x => x.id === id); return a && (a.type === "oral" || a.type === "topical"); }).length
+            : tab.id === "dx"
+            ? s.selectedDiagnoses.length
+            : 0;
+          const displayLabel = count > 0 ? `${tab.label} (${count})` : tab.label;
           return (
             <button key={tab.id} onClick={() => patch({ activeTab: tab.id })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: "var(--border-radius-md)", border: active ? "1px solid var(--color-border-info)" : "0.5px solid transparent", cursor: "pointer", textAlign: "left", background: active ? "var(--color-background-info)" : "transparent" }}>
-              <span style={{ fontSize: 13, color: active ? "var(--color-text-info)" : "var(--color-text-primary)", fontWeight: active ? 500 : 400 }}>{tab.label}</span>
+              <span style={{ fontSize: 13, color: active ? "var(--color-text-info)" : "var(--color-text-primary)", fontWeight: active ? 500 : 400 }}>{displayLabel}</span>
             </button>
           );
         })}
 
         <div style={{ flex: 1 }} />
-
-        <button onClick={() => patch({ activeTab: "treat" })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: "var(--border-radius-md)", border: s.activeTab === "treat" ? "1px solid #F7C1C1" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: s.activeTab === "treat" ? "#FCEBEB" : "var(--color-background-primary)", marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "#A32D2D" }}>Start treatment</span>
-        </button>
 
         <div style={{ padding: "8px 8px 0", borderTop: "0.5px solid var(--color-border-tertiary)", marginTop: 4 }}>
           <div style={{ fontSize: 10, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>Actions ({s.actions.length})</div>
@@ -1056,10 +1844,15 @@ export default function App() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
+        <div style={{ padding: "7px 14px", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "var(--color-background-secondary)", flexShrink: 0, display: "flex", gap: 12, alignItems: "baseline" }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>{s.sessionData?.state.case.patient.name} — {s.sessionData?.state.case.patient.breed}</div>
+          <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>Presenting: {s.sessionData?.state.case.presenting_complaint}</div>
+        </div>
+
         {s.activeTab === "ask" && (
           <>
             <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
-              {s.messages.map(msg => <ChatMessage key={msg.id} msg={msg} />)}
+              {s.messages.map(msg => <ChatMessage key={msg.id} msg={msg} onViewResult={openDiagnosticModal} />)}
               {s.loading && <div style={{ display: "flex", gap: 6, padding: "8px 0", alignItems: "center" }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-border-secondary)", animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}</div>}
               <div ref={bottomRef} />
             </div>
@@ -1071,12 +1864,46 @@ export default function App() {
           </>
         )}
 
-        {s.activeTab === "exam" && <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`Examine the ${key}`)} closeupImages={getCloseups(s.caseId)} />}
-        {s.activeTab === "diag" && <DiagnosticsPanel caseId={s.caseId} onRun={(key) => send(`test:${key}`)} testsRun={s.testsRun} testResults={s.testResults} />}
-        {s.activeTab === "dx" && <DiagnosisPanel caseId={s.caseId} attempted={s.diagnosisAttempted} onDiagnose={d => { patch({ diagnosisAttempted: s.diagnosisAttempted.includes(d.id) ? s.diagnosisAttempted : [...s.diagnosisAttempted, d.id] }); send(`diagnose:${d.id}`); }} />}
-        {s.activeTab === "treat" && <TreatmentPanel allActions={s.allActions} actionsLoaded={s.actionsLoaded} selectedActionIds={s.selectedActionIds} onToggle={id => patch({ selectedActionIds: s.selectedActionIds.includes(id) ? s.selectedActionIds.filter(x => x !== id) : [...s.selectedActionIds, id] })} onSubmit={() => sendTreatment(s.selectedActionIds)} loading={s.loading} />}
+        {s.activeTab === "exam" && <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} />}
+        {s.activeTab === "diag" && <DiagnosticsPanel tests={s.allDiagnostics} onRun={(key) => send(`test:${key}`)} onView={openDiagnosticModal} testsRun={s.testsRun} />}
+        {s.activeTab === "dx" && <DiagnosisPanel
+          diagnoses={s.allDiagnoses}
+          attempted={s.diagnosisAttempted}
+          selectedDiagnoses={s.selectedDiagnoses}
+          onSelect={d => {
+            const alreadySelected = s.selectedDiagnoses.some(x => x.id === d.id);
+            patch({ selectedDiagnoses: alreadySelected ? s.selectedDiagnoses.filter(x => x.id !== d.id) : [...s.selectedDiagnoses, d] });
+          }}
+          onConfirm={async (selected) => {
+            const newAttempted = [...s.diagnosisAttempted];
+            for (const d of selected) {
+              if (!newAttempted.includes(d.id)) newAttempted.push(d.id);
+              await send(`diagnose:${d.id}`);
+            }
+            patch({ diagnosisAttempted: newAttempted, selectedDiagnoses: [] });
+          }}
+        />}
+        {(s.activeTab === "treat_clinic" || s.activeTab === "treat_rx") && <TreatmentPanel allActions={s.allActions.filter(a => a.type !== "disposition")} actionsLoaded={s.actionsLoaded} selectedActionIds={s.selectedActionIds} onToggle={id => patch({ selectedActionIds: s.selectedActionIds.includes(id) ? s.selectedActionIds.filter(x => x !== id) : [...s.selectedActionIds, id] })} onSubmit={() => sendTreatment(s.selectedActionIds, true)} onDirectSubmit={id => sendTreatment([id], false)} onFinalize={() => sendTreatment([], true)} pendingTreatments={s.pendingTreatments} loading={s.loading} tabId={s.activeTab} />}
+        {s.activeTab === "disposition" && <DispositionPanel
+          dispositionActions={s.allActions.filter(a => a.type === "disposition")}
+          selected={s.dispositionSelected}
+          onSelect={id => patch({ dispositionSelected: id })}
+          onConfirm={id => { patch({ dispositionSelected: null }); sendTreatment([id], true); }}
+          loading={s.loading}
+        />}
 
       </div>
+
+      <DiagnosticResultModal
+        open={s.diagnosticModal.open}
+        testKey={s.diagnosticModal.testKey}
+        testData={s.diagnosticModal.testData}
+        patient={s.sessionData?.state.case.patient}
+        ownerName={s.sessionData?.state.client?.name}
+        caseId={s.caseId}
+        onClose={closeDiagnosticModal}
+      />
+
       <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }`}</style>
     </div>
   );
