@@ -44,10 +44,13 @@ const ICON_PATHS = {
 };
 
 export const CATEGORY_ICONS = {
-  "Point-of-Care": "pulse", "Rapid / SNAP Tests": "vial", "Dermatology & Cytology": "microscope",
-  "Blood & Biochemistry": "flask", "Urine & Faecal": "droplet", "Microbiology": "bug",
-  "Imaging": "xray", "Cardiac & Neurological": "heart", "Biopsy & Histopathology": "scissors",
-  "Diet & Trials": "bone", "Allergy / Immunology": "shield",
+  // In-House
+  "Analyzers": "flask", "Refractometer & Centrifuge": "droplet", "Cytology & Microscopy": "microscope",
+  "Rapid Tests": "vial", "Imaging": "xray", "Point of Care Monitoring": "pulse",
+  "Point of Care Screening": "search", "Management Trials": "bone",
+  // Send-Out
+  "Cultures": "bug", "Histopathology": "scissors", "Reference Lab Panels": "clipboard",
+  "Serology": "shield", "Advanced Imaging/Referral": "hospital",
 };
 export const REGION_ICONS = {
   temperature: "thermometer", general: "stethoscope", skin: "bandage", lymph_nodes: "node",

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Icon, Chip, Btn, DogAvatar } from "./ui/DesignKit";
+import { Icon, Chip, Btn, DogAvatar, CATEGORY_ICONS } from "./ui/DesignKit";
 import RoomScene, { HistoryPanelBody } from "./room/RoomScene";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
@@ -164,18 +164,32 @@ const BISCUIT_VIEWS = [
 const ACTION_TYPE_ORDER = ["injectable", "intervention", "oral", "topical"];
 const ACTION_TYPE_LABELS = { injectable: "Injectables", intervention: "Interventions", oral: "Oral medications", topical: "Topical treatments" };
 
-const DIAGNOSTICS_CATEGORY_ORDER = [
-  "Point-of-Care",
-  "Rapid / SNAP Tests",
-  "Dermatology & Cytology",
-  "Blood & Biochemistry",
-  "Urine & Faecal",
-  "Microbiology",
-  "Imaging",
-  "Cardiac & Neurological",
-  "Biopsy & Histopathology",
-  "Diet & Trials",
-  "Allergy / Immunology",
+const DIAGNOSTICS_GROUP_ORDER = [
+  {
+    group: "in_house",
+    label: "In-House",
+    categories: [
+      "Analyzers",
+      "Refractometer & Centrifuge",
+      "Cytology & Microscopy",
+      "Rapid Tests",
+      "Imaging",
+      "Point of Care Monitoring",
+      "Point of Care Screening",
+      "Management Trials",
+    ],
+  },
+  {
+    group: "send_out",
+    label: "Send-Out",
+    categories: [
+      "Cultures",
+      "Histopathology",
+      "Reference Lab Panels",
+      "Serology",
+      "Advanced Imaging/Referral",
+    ],
+  },
 ];
 
 const DIAGNOSIS_CATEGORY_ORDER = [
@@ -550,28 +564,39 @@ function DiagnosticsPanel({ tests, onRun, onView, testsRun }) {
     acc[cat].push(t);
     return acc;
   }, {});
-  const orderedCats = DIAGNOSTICS_CATEGORY_ORDER.filter(c => grouped[c]);
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
       <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 12 }}>Select a test to run</div>
-      {orderedCats.map(cat => (
-        <div key={cat} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{cat}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {grouped[cat].map(t => {
-              const done = testsRun.includes(t.key);
-              return (
-                <div key={t.key}>
-                  <button onClick={() => done ? onView(t.key) : onRun(t.key)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)" }}>
-                    <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
-                    <span style={{ fontSize: 11, color: done ? "var(--color-text-info)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{done ? "View result" : (t.cost_tier === "high" ? "High cost" : t.cost_tier === "medium" ? "Medium cost" : "Low cost")}</span>
-                  </button>
+      {DIAGNOSTICS_GROUP_ORDER.map(grp => {
+        const cats = grp.categories.filter(c => grouped[c]);
+        if (cats.length === 0) return null;
+        return (
+          <div key={grp.group} style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-text-primary)", marginBottom: 10, paddingBottom: 4, borderBottom: "0.5px solid var(--color-border-secondary)" }}>{grp.label}</div>
+            {cats.map(cat => (
+              <div key={cat} style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>
+                  <Icon name={CATEGORY_ICONS[cat] || "info"} size={14} stroke={1.75} />
+                  {cat}
                 </div>
-              );
-            })}
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {grouped[cat].map(t => {
+                    const done = testsRun.includes(t.key);
+                    return (
+                      <div key={t.key}>
+                        <button onClick={() => done ? onView(t.key) : onRun(t.key)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)" }}>
+                          <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
+                          <span style={{ fontSize: 11, color: done ? "var(--color-text-info)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{done ? "View result" : (t.cost_tier === "high" ? "High cost" : t.cost_tier === "medium" ? "Medium cost" : "Low cost")}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
