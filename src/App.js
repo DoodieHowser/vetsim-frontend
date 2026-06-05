@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Icon, Meter, Chip, Btn, DogAvatar, EMOTION_META } from "./ui/DesignKit";
+import { Icon, Chip, Btn, DogAvatar } from "./ui/DesignKit";
+import RoomScene, { HistoryPanelBody } from "./room/RoomScene";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
 import pepperFrontalImg from "./images/pepper_frontal.png";
@@ -1632,28 +1633,8 @@ function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, ca
   );
 }
 
-const TABS = [
-  { id: "ask",          label: "Ask questions"        },
-  { id: "exam",         label: "Physical exam"         },
-  { id: "diag",         label: "Run diagnostics"       },
-  { id: "dx",           label: "Make diagnosis"        },
-  { id: "treat_clinic", label: "In-Clinic Treatments"  },
-  { id: "treat_rx",     label: "Prescriptions"         },
-  { id: "disposition",  label: "Disposition"           },
-];
-
-const TAB_ICONS = {
-  ask: "clipboard",
-  exam: "stethoscope",
-  diag: "flask",
-  dx: "search",
-  treat_clinic: "syringe",
-  treat_rx: "pill",
-  disposition: "hospital",
-};
-
 function initState() {
-  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: "ask", examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], dispositionSelected: null, dispositionConfirmPending: false };
+  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], dispositionSelected: null, dispositionConfirmPending: false };
 }
 
 export default function App() {
@@ -1702,7 +1683,7 @@ export default function App() {
   }
 
   function beginConsultation() {
-    patch({ screen: "chat", activeTab: "ask", messages: [] });
+    patch({ screen: "chat", activeTab: null, messages: [] });
   }
 
   function tryInterceptDiagnosis(text) {
@@ -1826,85 +1807,46 @@ export default function App() {
 
   if (s.screen === "select") return <SelectScreen loading={s.loading} error={s.error} onSelect={selectCase} />;
 
-  return (
-    <div style={{ display: "flex", height: 600, maxWidth: 860, margin: "0 auto", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden", background: "var(--color-background-primary)" }}>
+  const patient = s.sessionData?.state.case.patient;
+  const patientName = patient?.name || "Patient";
 
-      <div style={{ width: 200, borderRight: "1px solid var(--color-border-tertiary)", padding: "12px 10px", display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, background: "var(--color-background-secondary)" }}>
-        {/* brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "2px 6px 10px" }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <Icon name="paw" size={18} stroke={2.2} />
-          </div>
-          <span style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--color-text-primary)" }}>VetSim</span>
-        </div>
+  const DRAWER_META = {
+    ask:           { title: "Talk with the owner", sub: "Ask about the history, diet and home care.", icon: "chat" },
+    exam:          { title: "Physical exam", sub: "Tap an area on the patient to examine it.", icon: "stethoscope" },
+    history:       { title: `${patientName} — patient chart`, sub: "Signalment, history & intake notes.", icon: "clipboard" },
+    diag:          { title: "Diagnostics bench", sub: "Choose a sample or scan to run at the bench.", icon: "microscope" },
+    dx:            { title: "Differential list", sub: "Select the diagnoses you're weighing, then confirm.", icon: "list" },
+    treat_clinic:  { title: "Injectable & in-clinic treatments", sub: "From the fridge & trolley — build a plan, then administer.", icon: "syringe" },
+    treat_rx:      { title: "Oral & topical medications", sub: "From the pharmacy — build the script, then dispense.", icon: "pill" },
+    disposition:   { title: "Close the consult", sub: "Decide where the patient goes next — this ends the visit.", icon: "door" },
+  };
 
-        {/* vitals */}
-        <div style={{ padding: "10px 8px", borderTop: "1px solid var(--color-border-tertiary)", borderBottom: "1px solid var(--color-border-tertiary)", marginBottom: 8 }}>
-          <Meter label="Trust" value={s.scores.trust} tone="trust" icon="sparkle" />
-          <Meter label="Health" value={s.scores.patient_health} tone="health" icon="heart" />
-          <Meter label="Spend" value={s.scores.cost} tone="accent" icon="flask" />
-          {(() => {
-            const em = EMOTION_META[s.emotion];
-            return <div style={{ marginTop: 8 }}><Chip tone={em?.tone || "neutral"}>{em?.label || (s.emotion || "").replace(/_/g, " ")}</Chip></div>;
-          })()}
-        </div>
-
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-secondary)", padding: "0 8px 6px" }}>Workflow</div>
-
-        {TABS.map(tab => {
-          const active = s.activeTab === tab.id;
-          const count = tab.id === "treat_clinic"
-            ? s.selectedActionIds.filter(id => { const a = s.allActions.find(x => x.id === id); return a && (a.type === "injectable" || a.type === "intervention"); }).length
-            : tab.id === "treat_rx"
-            ? s.selectedActionIds.filter(id => { const a = s.allActions.find(x => x.id === id); return a && (a.type === "oral" || a.type === "topical"); }).length
-            : tab.id === "dx"
-            ? s.selectedDiagnoses.length
-            : 0;
-          return (
-            <button key={tab.id} onClick={() => patch({ activeTab: tab.id })} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: "var(--border-radius-md)", border: active ? "1px solid var(--color-border-info)" : "1px solid transparent", cursor: "pointer", textAlign: "left", background: active ? "var(--ds-accent-soft)" : "transparent", transition: "background .15s" }}>
-              <span style={{ color: active ? "var(--ds-accent)" : "var(--color-text-secondary)", display: "inline-flex" }}><Icon name={TAB_ICONS[tab.id]} size={16} stroke={2.1} /></span>
-              <span style={{ fontSize: 13, color: active ? "var(--color-text-info)" : "var(--color-text-primary)", fontWeight: active ? 700 : 500, flex: 1 }}>{tab.label}</span>
-              {count > 0 && <span style={{ fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, padding: "0 5px", borderRadius: 99, background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{count}</span>}
-            </button>
-          );
-        })}
-
-        <div style={{ flex: 1 }} />
-
-        <div style={{ padding: "8px 8px 0", borderTop: "1px solid var(--color-border-tertiary)", marginTop: 4 }}>
-          <div style={{ fontSize: 10, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>Activity ({s.actions.length})</div>
-          <div style={{ fontSize: 10.5, color: "var(--color-text-secondary)", lineHeight: 1.7, maxHeight: 80, overflowY: "auto" }}>
-            {s.actions.length === 0 && <span style={{ opacity: 0.5 }}>None yet</span>}
-            {s.actions.map((a, i) => <div key={i} style={{ textTransform: "capitalize" }}>{i + 1}. {(a.intent || "").replace(/_/g, " ")}</div>)}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-
-        <div style={{ padding: "7px 14px", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "var(--color-background-secondary)", flexShrink: 0, display: "flex", gap: 12, alignItems: "baseline" }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>{s.sessionData?.state.case.patient.name} — {s.sessionData?.state.case.patient.breed}</div>
-          <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>Presenting: {s.sessionData?.state.case.presenting_complaint}</div>
-        </div>
-
-        {s.activeTab === "ask" && (
-          <>
+  function renderDrawerBody() {
+    switch (s.activeTab) {
+      case "ask":
+        return (
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+              {s.messages.length === 0 && !s.loading && <div style={{ fontSize: 13, color: "var(--color-text-secondary)", padding: "8px 2px" }}>Ask the owner about {patientName}'s history, diet, or home care to begin.</div>}
               {s.messages.map(msg => <ChatMessage key={msg.id} msg={msg} onViewResult={openDiagnosticModal} />)}
               {s.loading && <div style={{ display: "flex", gap: 6, padding: "8px 0", alignItems: "center" }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-border-secondary)", animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}</div>}
               <div ref={bottomRef} />
             </div>
             {s.error && <div style={{ padding: "8px 1rem", background: "var(--color-background-danger)", fontSize: 12, color: "var(--color-text-danger)", borderTop: "0.5px solid var(--color-border-danger)" }}>{s.error}</div>}
-            <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)", padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)", padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
               <textarea ref={inputRef} value={s.input} onChange={e => patch({ input: e.target.value })} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(s.input.trim()); }}} placeholder="Ask the owner a question…" rows={2} disabled={s.loading} style={{ flex: 1, resize: "none", fontSize: 13, borderRadius: "var(--border-radius-md)", padding: "8px 11px", lineHeight: 1.5, fontFamily: "var(--font-sans)", border: "1px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", boxSizing: "border-box" }} />
               <button onClick={() => send(s.input.trim())} disabled={s.loading || !s.input.trim()} style={{ padding: "7px 16px", fontSize: 13, fontWeight: 600, borderRadius: "var(--border-radius-md)", border: "none", background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", cursor: s.loading || !s.input.trim() ? "not-allowed" : "pointer", opacity: s.loading || !s.input.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: "stretch", fontFamily: "var(--font-sans)" }}>Send</button>
             </div>
-          </>
-        )}
-
-        {s.activeTab === "exam" && <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} />}
-        {s.activeTab === "diag" && <DiagnosticsPanel tests={s.allDiagnostics} onRun={(key) => send(`test:${key}`)} onView={openDiagnosticModal} testsRun={s.testsRun} />}
-        {s.activeTab === "dx" && <DiagnosisPanel
+          </div>
+        );
+      case "exam":
+        return <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} />;
+      case "history":
+        return <HistoryPanelBody patient={patient} />;
+      case "diag":
+        return <DiagnosticsPanel tests={s.allDiagnostics} onRun={(key) => send(`test:${key}`)} onView={openDiagnosticModal} testsRun={s.testsRun} />;
+      case "dx":
+        return <DiagnosisPanel
           diagnoses={s.allDiagnoses}
           attempted={s.diagnosisAttempted}
           selectedDiagnoses={s.selectedDiagnoses}
@@ -1920,29 +1862,53 @@ export default function App() {
             }
             patch({ diagnosisAttempted: newAttempted, selectedDiagnoses: [] });
           }}
-        />}
-        {(s.activeTab === "treat_clinic" || s.activeTab === "treat_rx") && <TreatmentPanel allActions={s.allActions.filter(a => a.type !== "disposition")} actionsLoaded={s.actionsLoaded} selectedActionIds={s.selectedActionIds} onToggle={id => patch({ selectedActionIds: s.selectedActionIds.includes(id) ? s.selectedActionIds.filter(x => x !== id) : [...s.selectedActionIds, id] })} onSubmit={() => sendTreatment(s.selectedActionIds, true)} onDirectSubmit={id => sendTreatment([id], false)} onFinalize={() => sendTreatment([], true)} pendingTreatments={s.pendingTreatments} loading={s.loading} tabId={s.activeTab} />}
-        {s.activeTab === "disposition" && <DispositionPanel
+        />;
+      case "treat_clinic":
+      case "treat_rx":
+        return <TreatmentPanel allActions={s.allActions.filter(a => a.type !== "disposition")} actionsLoaded={s.actionsLoaded} selectedActionIds={s.selectedActionIds} onToggle={id => patch({ selectedActionIds: s.selectedActionIds.includes(id) ? s.selectedActionIds.filter(x => x !== id) : [...s.selectedActionIds, id] })} onSubmit={() => sendTreatment(s.selectedActionIds, true)} onDirectSubmit={id => sendTreatment([id], false)} onFinalize={() => sendTreatment([], true)} pendingTreatments={s.pendingTreatments} loading={s.loading} tabId={s.activeTab} />;
+      case "disposition":
+        return <DispositionPanel
           dispositionActions={s.allActions.filter(a => a.type === "disposition")}
           selected={s.dispositionSelected}
           onSelect={id => patch({ dispositionSelected: id })}
           onConfirm={id => { patch({ dispositionSelected: null }); sendTreatment([id], true); }}
           loading={s.loading}
-        />}
+        />;
+      default:
+        return null;
+    }
+  }
 
-      </div>
+  return (
+    <>
+      <RoomScene
+        scores={s.scores}
+        emotion={s.emotion}
+        patient={patient}
+        caseId={s.caseId}
+        presentingComplaint={s.sessionData?.state.case.presenting_complaint}
+        diffCount={s.selectedDiagnoses.length}
+        examCount={s.examFindings.length}
+        spend={s.scores.cost}
+        activeDrawer={s.activeTab}
+        drawerMeta={s.activeTab ? DRAWER_META[s.activeTab] : null}
+        onNav={id => patch({ activeTab: id })}
+        onClose={() => patch({ activeTab: null })}
+      >
+        {renderDrawerBody()}
+      </RoomScene>
 
       <DiagnosticResultModal
         open={s.diagnosticModal.open}
         testKey={s.diagnosticModal.testKey}
         testData={s.diagnosticModal.testData}
-        patient={s.sessionData?.state.case.patient}
+        patient={patient}
         ownerName={s.sessionData?.state.client?.name}
         caseId={s.caseId}
         onClose={closeDiagnosticModal}
       />
 
       <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }`}</style>
-    </div>
+    </>
   );
 }

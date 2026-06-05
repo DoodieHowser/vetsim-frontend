@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { Icon, Meter, Chip, Btn, DogAvatar, EMOTION_META } from "./ui/DesignKit";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
 import pepperFrontalImg from "./images/pepper_frontal.png";
@@ -31,8 +32,30 @@ import biscuitLymphNodesImg from "./images/Biscuit_lymph_nodes.png";
 const API = "http://localhost:3000";
 
 const CASE_OPTIONS = [
-  { id: "derm_001", label: "Pepper — Chronic itching", sub: "French Bulldog · Medium", emoji: "🐾" },
-  { id: "gdv_001", label: "Biscuit — Emergency GDV", sub: "Labrador mix · Hard", emoji: "🚨" },
+  {
+    id: "derm_001",
+    name: "Pepper",
+    title: "Chronic itching",
+    breedSub: "French Bulldog",
+    difficulty: "Medium",
+    tag: "Routine",
+    complaint: "She's been scratching herself raw for weeks. Nothing I try seems to help.",
+    label: "Pepper — Chronic itching",
+    sub: "French Bulldog · Medium",
+    emoji: "🐾",
+  },
+  {
+    id: "gdv_001",
+    name: "Biscuit",
+    title: "Emergency GDV",
+    breedSub: "Labrador mix",
+    difficulty: "Hard",
+    tag: "Emergency",
+    complaint: "His belly's swollen up and he keeps trying to be sick but nothing comes — please help him.",
+    label: "Biscuit — Emergency GDV",
+    sub: "Labrador mix · Hard",
+    emoji: "🚨",
+  },
 ];
 
 
@@ -209,20 +232,6 @@ function groupActionsByType(actions) {
   return map;
 }
 
-function ScoreBar({ label, value, color }) {
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-        <span style={{ fontSize: 10, fontWeight: 500, color: "var(--color-text-secondary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-primary)" }}>{value}</span>
-      </div>
-      <div style={{ height: 3, background: "var(--color-background-tertiary)", borderRadius: 2, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${value}%`, background: color, borderRadius: 2, transition: "width 0.5s ease" }} />
-      </div>
-    </div>
-  );
-}
-
 function ChatMessage({ msg, onViewResult }) {
   if (msg.role === "test_result") return (
     <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
@@ -307,7 +316,6 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
 
   const view = views[activeViewIdx];
   const selectedFinding = selectedArea ? examined.find(e => e.subtype === selectedArea) : null;
-  const selectedImpact = selectedArea && examLookup[selectedArea] ? examLookup[selectedArea] : null;
 
   const handleAreaTap = (key) => {
     if (examLookup[key]) return;
@@ -691,8 +699,8 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
           style={{
             width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none",
             cursor: selectedDiagnoses.length === 0 ? "not-allowed" : "pointer",
-            background: selectedDiagnoses.length === 0 ? "var(--color-background-tertiary)" : "#185FA5",
-            color: selectedDiagnoses.length === 0 ? "var(--color-text-secondary)" : "#fff",
+            background: selectedDiagnoses.length === 0 ? "var(--color-background-tertiary)" : "var(--ds-accent)",
+            color: selectedDiagnoses.length === 0 ? "var(--color-text-secondary)" : "var(--ds-accent-contrast)",
             fontSize: 13, fontWeight: 500,
           }}
         >
@@ -799,7 +807,7 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
           <button
             onClick={onFinalize}
             disabled={loading}
-            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: loading ? "not-allowed" : "pointer", background: "#A32D2D", color: "#fff", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: loading ? "not-allowed" : "pointer", background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
           >
             Finalize Treatment Plan
           </button>
@@ -816,7 +824,7 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
           <button
             onClick={onSubmit}
             disabled={loading || batchSelectedIds.length === 0}
-            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: batchSelectedIds.length === 0 || loading ? "not-allowed" : "pointer", background: batchSelectedIds.length === 0 ? "var(--color-background-tertiary)" : "#A32D2D", color: batchSelectedIds.length === 0 ? "var(--color-text-secondary)" : "#fff", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: batchSelectedIds.length === 0 || loading ? "not-allowed" : "pointer", background: batchSelectedIds.length === 0 ? "var(--color-background-tertiary)" : "var(--ds-accent)", color: batchSelectedIds.length === 0 ? "var(--color-text-secondary)" : "var(--ds-accent-contrast)", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
           >
             {batchSelectedIds.length === 0 ? "Select at least one prescription" : "Complete Prescription"}
           </button>
@@ -884,7 +892,7 @@ function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, l
           <div style={{ fontSize: 13, color: "var(--color-text-danger, #b91c1c)", fontWeight: 500, marginBottom: 10 }}>This will end the consultation. Are you sure?</div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={handleCancel} style={{ flex: 1, padding: "8px 12px", fontSize: 13, borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", cursor: "pointer", color: "var(--color-text-secondary)" }}>Cancel</button>
-            <button onClick={handleConfirm} disabled={loading} style={{ flex: 1, padding: "8px 12px", fontSize: 13, fontWeight: 500, borderRadius: "var(--border-radius-md)", border: "none", background: "#A32D2D", color: "#fff", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>Confirm — End consultation</button>
+            <button onClick={handleConfirm} disabled={loading} style={{ flex: 1, padding: "8px 12px", fontSize: 13, fontWeight: 500, borderRadius: "var(--border-radius-md)", border: "none", background: "var(--ds-danger)", color: "#fff", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>Confirm — End consultation</button>
           </div>
         </div>
       )}
@@ -892,226 +900,258 @@ function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, l
   );
 }
 
-const GRADE_CONFIG = {
-  A: { textClass: "text-emerald-700", bgClass: "bg-emerald-50", borderClass: "border-emerald-400", glowColor: "rgba(16,185,129,0.35)", barColor: "#10B981", label: "Outstanding performance" },
-  B: { textClass: "text-blue-700",    bgClass: "bg-blue-50",    borderClass: "border-blue-400",    glowColor: "rgba(59,130,246,0.35)", barColor: "#3B82F6", label: "Strong case management" },
-  C: { textClass: "text-amber-700",   bgClass: "bg-amber-50",   borderClass: "border-amber-400",   glowColor: "rgba(245,158,11,0.35)", barColor: "#F59E0B", label: "Adequate — room to grow" },
-  D: { textClass: "text-orange-700",  bgClass: "bg-orange-50",  borderClass: "border-orange-400",  glowColor: "rgba(249,115,22,0.35)", barColor: "#F97316", label: "Needs improvement" },
-  F: { textClass: "text-red-700",     bgClass: "bg-red-50",     borderClass: "border-red-400",     glowColor: "rgba(239,68,68,0.35)",  barColor: "#EF4444", label: "Critical errors made" },
+// ─── Report card (Warm Clinic) ──────────────────────────────────────────────
+const GRADE_META = {
+  A: { tone: "#3E9E6B", label: "Outstanding", sub: "Textbook case management." },
+  B: { tone: "#3B82F6", label: "Strong work", sub: "Confident, well-reasoned care." },
+  C: { tone: "#D89A3C", label: "Solid", sub: "Sound, with room to sharpen." },
+  D: { tone: "#E08A2B", label: "Shaky", sub: "Key steps were missed." },
+  F: { tone: "#C4452F", label: "Critical misses", sub: "Review this one carefully." },
+};
+const BREAK_META = {
+  accuracyScore: { label: "Diagnostic accuracy", icon: "search" },
+  outcomeScore: { label: "Patient outcome", icon: "heart" },
+  efficiencyScore: { label: "Efficiency", icon: "pulse" },
+  trustScore: { label: "Owner trust", icon: "sparkle" },
 };
 
-const BAR_COLORS = {
-  accuracyScore:  "#6366F1",
-  outcomeScore:   "#0EA5E9",
-  efficiencyScore:"#8B5CF6",
-  trustScore:     "#F59E0B",
-};
+function ScoreCounter({ target }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    const dur = 950, step = 16, inc = target / (dur / step); let cur = 0;
+    const t = setInterval(() => { cur += inc; if (cur >= target) { setV(target); clearInterval(t); } else setV(Math.round(cur)); }, step);
+    return () => clearInterval(t);
+  }, [target]);
+  return <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 68, lineHeight: 1, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{v}</span>;
+}
 
 function ReportCardScreen({ finalState, onRetry, onNewCase }) {
-  const outcome = finalState.outcome;
-  const cfg = GRADE_CONFIG[outcome.grade] || GRADE_CONFIG["F"];
+  const o = finalState.outcome;
+  const g = GRADE_META[o.grade] || GRADE_META.F;
 
-  const [displayScore, setDisplayScore] = useState(0);
-  const [barsActive, setBarsActive] = useState(false);
-
-  useEffect(() => {
-    const target = outcome.finalScore;
-    const duration = 900;
-    const step = 16;
-    const increment = target / (duration / step);
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        setDisplayScore(target);
-        clearInterval(timer);
-        setTimeout(() => setBarsActive(true), 100);
-      } else {
-        setDisplayScore(Math.round(current));
-      }
-    }, step);
-    return () => clearInterval(timer);
-  }, [outcome.finalScore]);
-
-  const breakdown = [
-    { key: "accuracyScore",   label: "Accuracy",   value: outcome.breakdown.accuracyScore },
-    { key: "outcomeScore",    label: "Outcome",     value: outcome.breakdown.outcomeScore },
-    { key: "efficiencyScore", label: "Efficiency",  value: outcome.breakdown.efficiencyScore },
-    { key: "trustScore",      label: "Trust",       value: outcome.breakdown.trustScore },
-  ];
-
-  const values = breakdown.map(b => b.value);
-  const maxVal = Math.max(...values);
-  const minVal = Math.min(...values);
-  const allSame = values.every(v => v === values[0]);
-
-  const sortedFeedback = [...(outcome.feedback || [])].sort((a, b) => {
-    const rank = s => s.startsWith("✔") ? 0 : s.startsWith("⚠") ? 1 : 2;
-    return rank(a) - rank(b);
-  });
-
-  function getAccuracyBadge(score) {
-    if (score >= 80) return { label: "Strong Dx", cls: "bg-teal-100 text-teal-700" };
-    if (score < 40)  return { label: "Missed Dx", cls: "bg-red-100 text-red-700" };
-    return null;
-  }
-  function getTrustBadge(score) {
-    if (score >= 80) return { label: "Trusted",   cls: "bg-emerald-100 text-emerald-700" };
-    if (score < 50)  return { label: "Low Trust",  cls: "bg-amber-100 text-amber-700" };
-    return null;
-  }
+  const breakdown = ["accuracyScore", "outcomeScore", "efficiencyScore", "trustScore"].map(k => ({ key: k, value: o.breakdown[k], ...BREAK_META[k] }));
+  const vals = breakdown.map(b => b.value), maxV = Math.max(...vals), minV = Math.min(...vals), same = vals.every(v => v === vals[0]);
+  const feedback = [...(o.feedback || [])].sort((a, b) => { const r = s => s.startsWith("✔") ? 0 : s.startsWith("⚠") ? 1 : 2; return r(a) - r(b); });
 
   return (
-    <div style={{ padding: "2rem 1.5rem", display: "flex", justifyContent: "center" }}>
-      <div className="w-full max-w-lg bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 p-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#9CA3AF", letterSpacing: "0.1em" }}>Case Complete</p>
-            <h2 className="text-lg font-semibold mb-1" style={{ color: "#111827" }}>{finalState.case.title}</h2>
-            <p className="text-sm" style={{ color: "#6B7280" }}>{finalState.case.patient.breed} · {finalState.case.patient.age} years</p>
-          </div>
-
-          {/* Grade badge — bounce + glow */}
-          <div
-            className={`w-20 h-20 rounded-full border-2 flex flex-col items-center justify-center shrink-0 ${cfg.bgClass} ${cfg.borderClass} animate-grade-pop animate-grade-glow`}
-            style={{ "--glow-color": cfg.glowColor }}
-          >
-            <span className={`text-3xl font-bold ${cfg.textClass}`}>{outcome.grade}</span>
-          </div>
-        </div>
-
-        {/* Score counter */}
-        <div className="flex flex-col items-center py-8" style={{ borderBottom: "1px solid #F3F4F6" }}>
-          <span className="font-bold tabular-nums" style={{ fontSize: 64, lineHeight: 1, color: "#111827" }}>{displayScore}</span>
-          <p className="text-sm mt-2" style={{ color: "#6B7280" }}>Final Score</p>
-          <p className={`text-xs font-semibold uppercase tracking-widest mt-2 ${cfg.textClass}`} style={{ letterSpacing: "0.1em" }}>{cfg.label}</p>
-        </div>
-
-        {/* Breakdown bars */}
-        <div className="p-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#9CA3AF", letterSpacing: "0.1em" }}>Breakdown</p>
-          {breakdown.map((item, i) => {
-            const isBest  = !allSame && item.value === maxVal;
-            const isWorst = !allSame && item.value === minVal;
-            const badge = item.key === "accuracyScore" ? getAccuracyBadge(item.value)
-                        : item.key === "trustScore"    ? getTrustBadge(item.value)
-                        : null;
-            const barFill = isBest ? "#10B981" : isWorst ? "#EF4444" : BAR_COLORS[item.key];
-            const rowBg   = isBest ? { background: "#F0FDF4", outline: "1px solid #A7F3D0" }
-                          : isWorst ? { background: "#FEF2F2", outline: "1px solid #FECACA" }
-                          : { background: "#F9FAFB" };
-            return (
-              <div key={item.key} className="mb-3 p-3 rounded-xl" style={rowBg}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: "#374151" }}>{item.label}</span>
-                    {isBest  && <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700">Best</span>}
-                    {isWorst && <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700">Needs work</span>}
-                    {badge   && <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badge.cls}`}>{badge.label}</span>}
-                  </div>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: "#111827" }}>{item.value}</span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: "#E5E7EB" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: barsActive ? `${item.value}%` : "0%",
-                      backgroundColor: barFill,
-                      transition: `width 0.65s cubic-bezier(0.4,0,0.2,1) ${i * 140}ms`,
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Feedback */}
-        {sortedFeedback.length > 0 && (
-          <div className="p-6" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#9CA3AF", letterSpacing: "0.1em" }}>Feedback</p>
-            <div className="flex flex-col gap-2">
-              {sortedFeedback.map((item, i) => {
-                const isGood = item.startsWith("✔");
-                const isWarn = item.startsWith("⚠");
-                const cls = isGood ? "bg-emerald-50 text-emerald-800"
-                          : isWarn ? "bg-amber-50 text-amber-800"
-                          :          "bg-red-50 text-red-800";
-                const icon = isGood ? "✔" : isWarn ? "⚠️" : "❌";
-                const text = item.split(" ").slice(1).join(" ");
-                return (
-                  <div key={i} className={`flex items-start gap-3 px-3 py-2 rounded-lg text-sm ${cls}`}>
-                    <span className="shrink-0 mt-px">{icon}</span>
-                    <span>{text}</span>
-                  </div>
-                );
-              })}
+    <div style={{ minHeight: "100%", display: "flex", justifyContent: "center", padding: "clamp(24px,5vw,52px) 18px 56px" }}>
+      <div style={{ width: "100%", maxWidth: 560 }}>
+        <div style={{ background: "var(--color-background-primary)", border: "1px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden", boxShadow: "var(--ds-shadow-pop)" }}>
+          {/* header */}
+          <div style={{ position: "relative", padding: "24px", borderBottom: "1px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", gap: 16, overflow: "hidden" }}>
+            <div style={{ position: "absolute", inset: 0, background: `radial-gradient(120% 140% at 90% -20%, ${g.tone}22, transparent 60%)`, pointerEvents: "none" }} />
+            <div style={{ position: "relative", minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 6 }}>Case complete</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.15, marginBottom: 6, textWrap: "balance" }}>{finalState.case.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: g.tone, lineHeight: 1.35, textWrap: "pretty" }}>{g.label} · {g.sub}</div>
+            </div>
+            <div style={{ width: 84, height: 84, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", position: "relative",
+              border: `3px solid ${g.tone}`, background: "var(--color-background-secondary)", boxShadow: `0 0 0 6px ${g.tone}1f, 0 0 30px ${g.tone}55` }}>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 44, fontWeight: 800, color: g.tone, lineHeight: 1 }}>{o.grade}</span>
             </div>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 p-4">
-          <button
-            onClick={onRetry}
-            className="flex-1 py-2.5 px-4 text-sm font-medium rounded-xl transition-colors"
-            style={{ border: "1px solid #E5E7EB", background: "#fff", color: "#374151", cursor: "pointer" }}
-            onMouseOver={e => e.currentTarget.style.background = "#F9FAFB"}
-            onMouseOut={e => e.currentTarget.style.background = "#fff"}
-          >
-            Try again
-          </button>
-          <button
-            onClick={onNewCase}
-            className="flex-1 py-2.5 px-4 text-sm font-medium rounded-xl transition-colors"
-            style={{ background: "#111827", color: "#fff", border: "none", cursor: "pointer" }}
-            onMouseOver={e => e.currentTarget.style.background = "#1F2937"}
-            onMouseOut={e => e.currentTarget.style.background = "#111827"}
-          >
-            New case
-          </button>
+          {/* score */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "26px 0 22px", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+            <ScoreCounter target={o.finalScore} />
+            <span style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, letterSpacing: "0.04em" }}>FINAL SCORE / 100</span>
+          </div>
+          {/* breakdown */}
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 14 }}>Breakdown</div>
+            {breakdown.map((b) => {
+              const best = !same && b.value === maxV, worst = !same && b.value === minV;
+              const col = best ? "var(--ds-good)" : worst ? "var(--ds-danger)" : "var(--ds-accent)";
+              return (
+                <div key={b.key} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                      <span style={{ color: col }}><Icon name={b.icon} size={15} stroke={2.2} /></span>{b.label}
+                      {best && <Chip tone="success">Best</Chip>}{worst && <Chip tone="danger">Focus</Chip>}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{b.value}</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 99, background: "var(--color-background-tertiary)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 99, background: col, width: `${b.value}%`, boxShadow: `0 0 10px ${col}66` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* feedback */}
+          {feedback.length > 0 && (
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 12 }}>Debrief</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {feedback.map((item, i) => {
+                  const good = item.startsWith("✔"), warn = item.startsWith("⚠");
+                  const tone = good ? "success" : warn ? "warning" : "danger";
+                  const map = { success: ["var(--color-background-success)", "var(--color-text-success)", "var(--color-border-success)", "check"], warning: ["var(--color-background-warning)", "var(--color-text-warning)", "var(--color-border-warning)", "alert"], danger: ["var(--color-background-danger)", "var(--color-text-danger)", "var(--color-border-danger)", "close"] }[tone];
+                  return (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", borderRadius: "var(--border-radius-md)", background: map[0], border: `1px solid ${map[2]}`, color: map[1] }}>
+                      <Icon name={map[3]} size={15} stroke={2.4} style={{ marginTop: 1, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13.5, lineHeight: 1.5, textWrap: "pretty" }}>{item.split(" ").slice(1).join(" ")}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* actions */}
+          <div style={{ display: "flex", gap: 10, padding: 18 }}>
+            <Btn variant="ghost" full onClick={onRetry} icon="pulse">Retry case</Btn>
+            <Btn full onClick={onNewCase} iconRight="arrow">New case</Btn>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function PatientCard({ sessionData, onBegin, onBack }) {
-  const { state } = sessionData;
-  const p = state.case.patient;
+// ─── Case select (home) ─────────────────────────────────────────────────────
+function diffTone(d) { return d === "Hard" ? "danger" : d === "Medium" ? "warning" : "success"; }
+
+function CaseCard({ c, onSelect, disabled }) {
+  const [hover, setHover] = useState(false);
+  const breed = c.id === "gdv_001" ? "lab" : "frenchie";
+  const emergency = c.tag === "Emergency";
   return (
-    <div style={{ padding: "2rem 1.5rem", maxWidth: 480, margin: "0 auto" }}>
-      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
-        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-background-info)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 5.5C10 4.1 8.9 3 7.5 3S5 4.1 5 5.5 6.1 8 7.5 8 10 6.9 10 5.5z"/>
-              <path d="M19 5.5C19 4.1 17.9 3 16.5 3S14 4.1 14 5.5 15.1 8 16.5 8 19 6.9 19 5.5z"/>
-              <path d="M5 13c0-3.3 2.7-6 6-6h2c3.3 0 6 2.7 6 6v2c0 1.1-.9 2-2 2h-1l-1 3h-4l-1-3H9c-1.1 0-2-.9-2-2v-2z"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 2 }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{p.breed} · {p.age} year{p.age !== 1 ? "s" : ""} old</div>
-          </div>
+    <button onClick={() => !disabled && onSelect(c.id)} disabled={disabled}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{
+        textAlign: "left", cursor: disabled ? "wait" : "pointer", border: "1px solid var(--color-border-tertiary)",
+        background: "var(--color-background-primary)", borderRadius: "var(--border-radius-lg)", padding: 0, overflow: "hidden",
+        boxShadow: hover ? "var(--ds-shadow-pop)" : "var(--ds-shadow-card)", transform: hover ? "translateY(-3px)" : "none",
+        transition: "transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s", display: "flex", flexDirection: "column",
+      }}>
+      <div style={{ display: "flex", gap: 16, padding: 18, alignItems: "center", position: "relative" }}>
+        <div style={{ width: 78, height: 78, borderRadius: 20, flexShrink: 0, display: "grid", placeItems: "center",
+          background: emergency ? "var(--color-background-danger)" : "var(--color-background-info)",
+          border: `1px solid ${emergency ? "var(--color-border-danger)" : "var(--color-border-info)"}` }}>
+          <DogAvatar breed={breed} size={66} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "var(--color-border-tertiary)", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-          {[["Species", state.case.species], ["Breed", p.breed], ["Age", `${p.age} year${p.age !== 1 ? "s" : ""}`], ["Sex", p.sex], ["Weight", `${p.weight_kg} kg`], ["Difficulty", state.case.difficulty]].map(([label, value]) => (
-            <div key={label} style={{ background: "var(--color-background-primary)", padding: "12px 16px" }}>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 14, color: "var(--color-text-primary)", textTransform: "capitalize" }}>{value}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>{c.name}</span>
+            <Chip tone={diffTone(c.difficulty)}>{c.difficulty}</Chip>
+            <Chip tone={emergency ? "danger" : "info"} icon={emergency ? "alert" : "paw"}>{c.tag}</Chip>
+          </div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 2 }}>{c.title}</div>
+          <div style={{ fontSize: 12.5, color: "var(--color-text-secondary)" }}>{c.breedSub}</div>
+        </div>
+      </div>
+      <div style={{ padding: "0 18px 16px" }}>
+        <p style={{ fontSize: 13, lineHeight: 1.55, color: "var(--color-text-secondary)", margin: "0 0 14px", textWrap: "pretty" }}>
+          “{c.complaint}”
+        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Walk-in · 16:42</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap",
+            color: hover ? "var(--ds-accent)" : "var(--color-text-primary)", transition: "color .15s" }}>
+            Start case <Icon name="arrow" size={17} stroke={2.4} style={{ transform: hover ? "translateX(3px)" : "none", transition: "transform .15s" }} />
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function SelectScreen({ loading, error, onSelect }) {
+  return (
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", padding: "clamp(24px,5vw,64px) 20px 64px" }}>
+      <div style={{ width: "100%", maxWidth: 760 }}>
+        {/* hero */}
+        <div style={{ display: "flex", alignItems: "center", gap: 13, marginBottom: 8 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", display: "grid", placeItems: "center", boxShadow: "var(--ds-shadow-card)" }}>
+            <Icon name="paw" size={24} stroke={2.2} />
+          </div>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--color-text-primary)" }}>VetSim</span>
+          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: "var(--ds-good)", boxShadow: "0 0 8px var(--ds-good)" }} />Clinic open
+          </span>
+        </div>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(30px,5vw,44px)", fontWeight: 700, lineHeight: 1.04, letterSpacing: "-0.02em", color: "var(--color-text-primary)", margin: "12px 0 10px", textWrap: "balance" }}>
+          Your patients are waiting.
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "var(--color-text-secondary)", margin: "0 0 28px", maxWidth: 540, textWrap: "pretty" }}>
+          Step into the consult room. Ask the right questions, examine your patient, order tests, reason to a diagnosis and treat — every choice moves trust, health and the clock. Earn your grade.
+        </p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)" }}>Today's caseload</span>
+          <span style={{ flex: 1, height: 1, background: "var(--color-border-tertiary)" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>{CASE_OPTIONS.length} cases</span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          {CASE_OPTIONS.map(c => <CaseCard key={c.id} c={c} onSelect={onSelect} disabled={loading} />)}
+        </div>
+
+        {error && (
+          <div style={{ marginTop: 20, padding: "11px 15px", background: "var(--color-background-danger)", border: "1px solid var(--color-border-danger)", borderRadius: "var(--border-radius-md)", fontSize: 13, color: "var(--color-text-danger)" }}>{error}</div>
+        )}
+        <p style={{ marginTop: 24, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
+          Make sure the backend is running: <code style={{ fontFamily: "var(--font-mono)", fontSize: 11, padding: "1px 5px", background: "var(--color-background-tertiary)", borderRadius: 4 }}>npm start</code> in your vetsim-backend folder.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Patient card (Warm Clinic) ─────────────────────────────────────────────
+function StatBlip({ label, value, icon }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, padding: "12px 14px", background: "var(--color-background-primary)" }}>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "var(--color-text-secondary)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 5 }}>
+        <span style={{ color: "var(--color-text-secondary)" }}><Icon name={icon} size={13} stroke={2.2} /></span>{label}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", textTransform: "capitalize" }}>{value}</div>
+    </div>
+  );
+}
+
+function PatientCard({ sessionData, onBegin, onBack }) {
+  const st = sessionData.state;
+  const p = st.case.patient;
+  const breed = st.case.title.includes("Biscuit") ? "lab" : "frenchie";
+  const emergency = st.case.difficulty === "Hard";
+  return (
+    <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "clamp(24px,5vw,56px) 20px 56px" }}>
+      <div style={{ width: "100%", maxWidth: 520 }}>
+        <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, fontFamily: "var(--font-sans)" }}>
+          <Icon name="chevron" size={16} style={{ transform: "rotate(180deg)" }} /> Back to caseload
+        </button>
+        <div style={{ background: "var(--color-background-primary)", border: "1px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden", boxShadow: "var(--ds-shadow-card)" }}>
+          {/* banner */}
+          <div style={{ padding: "22px 22px 20px", display: "flex", gap: 18, alignItems: "center",
+            background: emergency ? "var(--color-background-danger)" : "var(--color-background-info)",
+            borderBottom: `1px solid ${emergency ? "var(--color-border-danger)" : "var(--color-border-info)"}` }}>
+            <div style={{ width: 88, height: 88, borderRadius: 24, background: "var(--color-background-primary)", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "var(--ds-shadow-card)" }}>
+              <DogAvatar breed={breed} size={74} />
             </div>
-          ))}
-        </div>
-        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "#FCEBEB" }}>
-          <div style={{ fontSize: 11, color: "#A32D2D", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 5 }}>Presenting complaint</div>
-          <div style={{ fontSize: 14, color: "#501313", lineHeight: 1.6, textTransform: "capitalize" }}>{state.case.presenting_complaint}</div>
-        </div>
-        <div style={{ padding: "1rem 1.25rem", display: "flex", gap: 8 }}>
-          <button onClick={onBack} style={{ padding: "9px 14px", fontSize: 13, borderRadius: "var(--border-radius-md)", cursor: "pointer", color: "var(--color-text-secondary)" }}>Back</button>
-          <button onClick={onBegin} style={{ flex: 1, padding: 9, fontSize: 13, fontWeight: 500, borderRadius: "var(--border-radius-md)", cursor: "pointer" }}>Begin consultation →</button>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>{p.name}</div>
+              <div style={{ fontSize: 13.5, color: "var(--color-text-secondary)", margin: "5px 0 8px" }}>{p.breed} · {p.age} yr · {p.sex}</div>
+              <Chip tone={diffTone(st.case.difficulty)}>{st.case.difficulty} case</Chip>
+            </div>
+          </div>
+          {/* stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: "var(--color-border-tertiary)", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+            <StatBlip label="Species" value={st.case.species} icon="paw" />
+            <StatBlip label="Weight" value={`${p.weight_kg} kg`} icon="pulse" />
+            <StatBlip label="Owner" value={st.client.name} icon="clipboard" />
+          </div>
+          {/* complaint */}
+          <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--color-border-tertiary)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--ds-danger)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
+              <Icon name="alert" size={14} stroke={2.2} /> Presenting complaint
+            </div>
+            <div style={{ fontSize: 15, color: "var(--color-text-primary)", lineHeight: 1.55, textTransform: "capitalize", textWrap: "pretty" }}>{st.case.presenting_complaint}</div>
+          </div>
+          {/* cta */}
+          <div style={{ padding: 18, display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={onBack}>Not yet</Btn>
+            <Btn full onClick={onBegin} iconRight="arrow">Begin consultation</Btn>
+          </div>
         </div>
       </div>
     </div>
@@ -1602,6 +1642,16 @@ const TABS = [
   { id: "disposition",  label: "Disposition"           },
 ];
 
+const TAB_ICONS = {
+  ask: "clipboard",
+  exam: "stethoscope",
+  diag: "flask",
+  dx: "search",
+  treat_clinic: "syringe",
+  treat_rx: "pill",
+  disposition: "hospital",
+};
+
 function initState() {
   return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: "ask", examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], dispositionSelected: null, dispositionConfirmPending: false };
 }
@@ -1771,48 +1821,35 @@ export default function App() {
     } catch (e) { patch({ error: "Could not reach backend. Is the server running on port 3000?", loading: false }); }
   }
 
-  const emotionColor = { concerned: "var(--color-text-secondary)", frustrated: "var(--color-text-warning)", worried_about_cost: "var(--color-text-warning)", angry: "var(--color-text-danger)" }[s.emotion] || "var(--color-text-secondary)";
-
   if (s.screen === "results") return <ReportCardScreen finalState={s.finalState} onRetry={() => { const caseId = s.caseId; setS({ ...initState(), allActions: s.allActions, actionsLoaded: s.actionsLoaded, allDiagnostics: s.allDiagnostics, allDiagnoses: s.allDiagnoses, caseId }); selectCase(caseId); }} onNewCase={() => setS({ ...initState(), allActions: s.allActions, actionsLoaded: s.actionsLoaded, allDiagnostics: s.allDiagnostics, allDiagnoses: s.allDiagnoses })} />;
   if (s.screen === "patient") return <PatientCard sessionData={s.sessionData} onBegin={beginConsultation} onBack={() => setS(initState())} />;
 
-  if (s.screen === "select") return (
-    <div style={{ padding: "2rem 1.5rem", maxWidth: 520, margin: "0 auto" }}>
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 8 }}>VetSim</div>
-        <h2 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 8px", color: "var(--color-text-primary)" }}>Veterinary simulation</h2>
-        <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.6 }}>Play as a vet. Ask questions, examine the patient, run tests, and make a diagnosis. Your choices affect trust and outcomes.</p>
-      </div>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 8, letterSpacing: "0.05em", textTransform: "uppercase" }}>Select case</label>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {CASE_OPTIONS.map(c => (
-            <button key={c.id} onClick={() => selectCase(c.id)} disabled={s.loading} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", cursor: "pointer", textAlign: "left" }}>
-              <span style={{ fontSize: 20 }}>{c.emoji}</span>
-              <div>
-                <div style={{ fontSize: 14, color: "var(--color-text-primary)", fontWeight: 400 }}>{c.label}</div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 1 }}>{c.sub}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-      {s.error && <div style={{ padding: "10px 14px", background: "var(--color-background-danger)", borderRadius: "var(--border-radius-md)", fontSize: 13, color: "var(--color-text-danger)", marginBottom: "1rem" }}>{s.error}</div>}
-      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.6 }}>Make sure the backend is running: <code style={{ fontFamily: "var(--font-mono)", fontSize: 11, padding: "1px 5px", background: "var(--color-background-tertiary)", borderRadius: 4 }}>npm start</code> in your vetsim-backend folder.</p>
-    </div>
-  );
+  if (s.screen === "select") return <SelectScreen loading={s.loading} error={s.error} onSelect={selectCase} />;
 
   return (
     <div style={{ display: "flex", height: 600, maxWidth: 860, margin: "0 auto", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden", background: "var(--color-background-primary)" }}>
 
-      <div style={{ width: 188, borderRight: "0.5px solid var(--color-border-tertiary)", padding: "10px 8px", display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, background: "var(--color-background-secondary)" }}>
-        <div style={{ padding: "3px 8px 8px", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 6 }}>
-          <ScoreBar label="Trust" value={s.scores.trust} color="#1D9E75" />
-          <ScoreBar label="Health" value={s.scores.patient_health} color="#378ADD" />
-          <div style={{ fontSize: 11, color: emotionColor, textTransform: "capitalize", marginTop: 4 }}>{(s.emotion || "").replace(/_/g, " ")}</div>
+      <div style={{ width: 200, borderRight: "1px solid var(--color-border-tertiary)", padding: "12px 10px", display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, background: "var(--color-background-secondary)" }}>
+        {/* brand */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "2px 6px 10px" }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Icon name="paw" size={18} stroke={2.2} />
+          </div>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--color-text-primary)" }}>VetSim</span>
         </div>
 
-        <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", padding: "2px 8px 4px" }}>Actions</div>
+        {/* vitals */}
+        <div style={{ padding: "10px 8px", borderTop: "1px solid var(--color-border-tertiary)", borderBottom: "1px solid var(--color-border-tertiary)", marginBottom: 8 }}>
+          <Meter label="Trust" value={s.scores.trust} tone="trust" icon="sparkle" />
+          <Meter label="Health" value={s.scores.patient_health} tone="health" icon="heart" />
+          <Meter label="Spend" value={s.scores.cost} tone="accent" icon="flask" />
+          {(() => {
+            const em = EMOTION_META[s.emotion];
+            return <div style={{ marginTop: 8 }}><Chip tone={em?.tone || "neutral"}>{em?.label || (s.emotion || "").replace(/_/g, " ")}</Chip></div>;
+          })()}
+        </div>
+
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-secondary)", padding: "0 8px 6px" }}>Workflow</div>
 
         {TABS.map(tab => {
           const active = s.activeTab === tab.id;
@@ -1823,21 +1860,22 @@ export default function App() {
             : tab.id === "dx"
             ? s.selectedDiagnoses.length
             : 0;
-          const displayLabel = count > 0 ? `${tab.label} (${count})` : tab.label;
           return (
-            <button key={tab.id} onClick={() => patch({ activeTab: tab.id })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: "var(--border-radius-md)", border: active ? "1px solid var(--color-border-info)" : "0.5px solid transparent", cursor: "pointer", textAlign: "left", background: active ? "var(--color-background-info)" : "transparent" }}>
-              <span style={{ fontSize: 13, color: active ? "var(--color-text-info)" : "var(--color-text-primary)", fontWeight: active ? 500 : 400 }}>{displayLabel}</span>
+            <button key={tab.id} onClick={() => patch({ activeTab: tab.id })} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: "var(--border-radius-md)", border: active ? "1px solid var(--color-border-info)" : "1px solid transparent", cursor: "pointer", textAlign: "left", background: active ? "var(--ds-accent-soft)" : "transparent", transition: "background .15s" }}>
+              <span style={{ color: active ? "var(--ds-accent)" : "var(--color-text-secondary)", display: "inline-flex" }}><Icon name={TAB_ICONS[tab.id]} size={16} stroke={2.1} /></span>
+              <span style={{ fontSize: 13, color: active ? "var(--color-text-info)" : "var(--color-text-primary)", fontWeight: active ? 700 : 500, flex: 1 }}>{tab.label}</span>
+              {count > 0 && <span style={{ fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, padding: "0 5px", borderRadius: 99, background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{count}</span>}
             </button>
           );
         })}
 
         <div style={{ flex: 1 }} />
 
-        <div style={{ padding: "8px 8px 0", borderTop: "0.5px solid var(--color-border-tertiary)", marginTop: 4 }}>
-          <div style={{ fontSize: 10, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>Actions ({s.actions.length})</div>
-          <div style={{ fontSize: 10, color: "var(--color-text-secondary)", lineHeight: 1.7, maxHeight: 80, overflowY: "auto" }}>
+        <div style={{ padding: "8px 8px 0", borderTop: "1px solid var(--color-border-tertiary)", marginTop: 4 }}>
+          <div style={{ fontSize: 10, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>Activity ({s.actions.length})</div>
+          <div style={{ fontSize: 10.5, color: "var(--color-text-secondary)", lineHeight: 1.7, maxHeight: 80, overflowY: "auto" }}>
             {s.actions.length === 0 && <span style={{ opacity: 0.5 }}>None yet</span>}
-            {s.actions.map((a, i) => <div key={i}>{i + 1}. {(a.intent || "").replace(/_/g, " ")}</div>)}
+            {s.actions.map((a, i) => <div key={i} style={{ textTransform: "capitalize" }}>{i + 1}. {(a.intent || "").replace(/_/g, " ")}</div>)}
           </div>
         </div>
       </div>
@@ -1858,8 +1896,8 @@ export default function App() {
             </div>
             {s.error && <div style={{ padding: "8px 1rem", background: "var(--color-background-danger)", fontSize: 12, color: "var(--color-text-danger)", borderTop: "0.5px solid var(--color-border-danger)" }}>{s.error}</div>}
             <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)", padding: "10px 12px", display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <textarea ref={inputRef} value={s.input} onChange={e => patch({ input: e.target.value })} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(s.input.trim()); }}} placeholder="Ask the owner a question…" rows={2} disabled={s.loading} style={{ flex: 1, resize: "none", fontSize: 13, borderRadius: "var(--border-radius-md)", padding: "7px 10px", lineHeight: 1.5, fontFamily: "var(--font-sans)" }} />
-              <button onClick={() => send(s.input.trim())} disabled={s.loading || !s.input.trim()} style={{ padding: "7px 14px", fontSize: 13, fontWeight: 500, borderRadius: "var(--border-radius-md)", cursor: s.loading || !s.input.trim() ? "not-allowed" : "pointer", opacity: s.loading || !s.input.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: "stretch" }}>Send</button>
+              <textarea ref={inputRef} value={s.input} onChange={e => patch({ input: e.target.value })} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(s.input.trim()); }}} placeholder="Ask the owner a question…" rows={2} disabled={s.loading} style={{ flex: 1, resize: "none", fontSize: 13, borderRadius: "var(--border-radius-md)", padding: "8px 11px", lineHeight: 1.5, fontFamily: "var(--font-sans)", border: "1px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", boxSizing: "border-box" }} />
+              <button onClick={() => send(s.input.trim())} disabled={s.loading || !s.input.trim()} style={{ padding: "7px 16px", fontSize: 13, fontWeight: 600, borderRadius: "var(--border-radius-md)", border: "none", background: "var(--ds-accent)", color: "var(--ds-accent-contrast)", cursor: s.loading || !s.input.trim() ? "not-allowed" : "pointer", opacity: s.loading || !s.input.trim() ? 0.5 : 1, flexShrink: 0, alignSelf: "stretch", fontFamily: "var(--font-sans)" }}>Send</button>
             </div>
           </>
         )}

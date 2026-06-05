@@ -36,6 +36,11 @@ const ICON_PATHS = {
   drop2: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3Z"/><path d="M9 13a3 3 0 0 0 3 3"/>',
   vial: '<path d="M8 3h8M9 3v15a3 3 0 0 0 6 0V3M9 11h6"/>',
   bug: '<path d="M8 9a4 4 0 0 1 8 0v3a4 4 0 0 1-8 0V9Z"/><path d="M12 5V3M9 6 7 4m8 2 2-2M5 11H3m18 0h-2M6 16l-2 1m16-1 2 1M8 13H4m16 0h-4"/>',
+  chat: '<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/><path d="M8 10h8M8 13h5"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  door: '<path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M4 21h14M13.5 12h.01"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
 };
 
 export const CATEGORY_ICONS = {
