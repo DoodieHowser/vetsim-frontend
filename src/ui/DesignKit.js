@@ -50,6 +50,7 @@ export const CATEGORY_ICONS = {
   "Point of Care Screening": "search", "Management Trials": "bone",
   // Send-Out
   "Cultures": "bug", "Histopathology": "scissors", "Reference Lab Panels": "clipboard",
+  "Endocrine Function Testing": "flask", "Molecular/PCR": "vial", "Advanced Hematology/Immunology": "droplet",
   "Serology": "shield", "Advanced Imaging/Referral": "hospital",
 };
 export const REGION_ICONS = {
