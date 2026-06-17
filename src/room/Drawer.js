@@ -7,19 +7,20 @@ import { Icon } from "../ui/DesignKit";
 
 const CANVAS_W = 1280, CANVAS_H = 800;
 
-// the eight room actions → app tab ids (id === App's activeTab value).
+// the eight consultation tabs → app tab ids (id === App's activeTab value).
 // "history" renders HistoryChartPanel from the case `chart` object (built).
 // "stabilize" renders TreatmentPanel filtered to setting === "stabilize".
 export const NAV = [
-  { id: "exam",          label: "Examine",      icon: "stethoscope" },
-  { id: "ask",           label: "Ask owner",    icon: "chat" },
-  { id: "history",       label: "Chart",        icon: "monitor" },
-  { id: "diag",          label: "Diagnostics",  icon: "microscope" },
+  { id: "history",       label: "History",       icon: "monitor" },
+  { id: "exam",          label: "Exam",          icon: "stethoscope" },
+  { id: "stabilize",     label: "Stabilize",     icon: "heart" },
   { id: "dx",            label: "Differentials", icon: "list" },
-  { id: "treat_clinic",  label: "Injectables",  icon: "syringe" },
-  { id: "treat_rx",      label: "Oral meds",    icon: "pill" },
-  { id: "disposition",   label: "Disposition",  icon: "door" },
+  { id: "diag",          label: "Diagnostics",   icon: "microscope" },
+  { id: "treat_clinic",  label: "Interventions", icon: "syringe" },
+  { id: "treat_rx",      label: "Prescriptions", icon: "pill" },
+  { id: "disposition",   label: "Disposition",   icon: "door" },
 ];
+// Ask Owner chat moved to floating bubble icon — to be rebuilt as persistent popup
 
 export function useScale() {
   const [sc, setSc] = useState(1);
@@ -110,13 +111,14 @@ export function TabBar({ navId, onNav, patientName, patientSub, hud }) {
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 10px", borderRadius: 17,
+        maxWidth: "calc(100vw - 40px)", overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch",
         background: "linear-gradient(180deg,#E8ECED,#C2C8CA)", border: "1px solid #AAB1B4",
         boxShadow: "0 10px 24px rgba(40,22,10,0.4), inset 0 2px 3px rgba(255,255,255,0.7)" }}>
         {NAV.map(n => {
           const on = navId === n.id;
           return (
             <button key={n.id} onClick={() => onNav(n.id)} title={n.label}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 70, padding: "7px 4px 5px", borderRadius: 11, cursor: "pointer",
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 70, flexShrink: 0, padding: "7px 4px 5px", borderRadius: 11, cursor: "pointer",
                 background: on ? "var(--ds-accent)" : "rgba(255,255,255,0.5)", border: `1px solid ${on ? "var(--ds-accent-hover)" : "rgba(140,123,104,0.22)"}`,
                 color: on ? "#fff" : "var(--color-text-secondary)", fontFamily: "var(--font-sans)", transition: "transform .12s, background .15s",
                 transform: on ? "translateY(-2px)" : "none", boxShadow: on ? "0 6px 14px rgba(196,98,62,0.4)" : "none" }}>
