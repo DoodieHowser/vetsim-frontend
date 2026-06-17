@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Icon, Chip, Btn, DogAvatar, CATEGORY_ICONS } from "./ui/DesignKit";
-import RoomScene, { HistoryPanelBody } from "./room/RoomScene";
+import RoomScene from "./room/RoomScene";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
 import pepperFrontalImg from "./images/pepper_frontal.png";
@@ -161,36 +161,11 @@ const BISCUIT_VIEWS = [
   },
 ];
 
-const ACTION_TYPE_ORDER = ["injectable", "intervention", "oral", "topical"];
-const ACTION_TYPE_LABELS = { injectable: "Injectables", intervention: "Interventions", oral: "Oral medications", topical: "Topical treatments" };
 
-const DIAGNOSTICS_GROUP_ORDER = [
-  {
-    group: "in_house",
-    label: "In-House",
-    categories: [
-      "Analyzers",
-      "Refractometer & Centrifuge",
-      "Cytology & Microscopy",
-      "Rapid Tests",
-      "Imaging",
-      "Point of Care Monitoring",
-      "Point of Care Screening",
-      "Management Trials",
-    ],
-  },
-  {
-    group: "send_out",
-    label: "Send-Out",
-    categories: [
-      "Cultures",
-      "Histopathology",
-      "Reference Lab Panels",
-      "Serology",
-      "Advanced Imaging/Referral",
-    ],
-  },
-];
+// Parent group order for the Diagnostics tab. Each test carries its own
+// `group` (one of these) and `category` (subcategory) field, so subcategories
+// are derived from the data rather than hardcoded.
+const DIAGNOSTICS_GROUP_ORDER = ["In-House", "Reference Lab", "Referral"];
 
 const DIAGNOSIS_CATEGORY_ORDER = [
   "Dermatology",
@@ -237,15 +212,6 @@ function getCloseups(caseId) {
   return {};
 }
 
-function groupActionsByType(actions) {
-  const map = {};
-  for (const a of actions) {
-    const t = a.type || "other";
-    if (!map[t]) map[t] = [];
-    map[t].push(a);
-  }
-  return map;
-}
 
 function ChatMessage({ msg, onViewResult }) {
   if (msg.role === "test_result") return (
@@ -557,43 +523,85 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
   );
 }
 
+// Shared collapsible-section header used by the diagnostics & treatment panels.
+function GroupHeader({ label, open, onClick, level = 0 }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 10px", marginTop: 4,
+        background: level === 0 ? "var(--color-background-secondary)" : "var(--color-background-tertiary)",
+        border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)",
+        cursor: "pointer", textAlign: "left",
+        fontSize: level === 0 ? 12 : 11, fontWeight: level === 0 ? 600 : 500,
+        textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-primary)",
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>{open ? "▲" : "▼"}</span>
+    </button>
+  );
+}
+
 function DiagnosticsPanel({ tests, onRun, onView, testsRun }) {
-  const grouped = tests.reduce((acc, t) => {
-    const cat = t.category;
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(t);
-    return acc;
-  }, {});
+  // Two-level collapsible state — all groups start collapsed.
+  const [openGroups, setOpenGroups] = useState(new Set());
+  const [openCats, setOpenCats] = useState(new Set());
+  const toggle = (setSet, key) => setSet(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  // Build parent-group → subcategory → tests from each test's own fields.
+  const byGroup = {};
+  for (const t of tests) {
+    const g = t.group || "Other";
+    const c = t.category || "Other";
+    if (!byGroup[g]) byGroup[g] = {};
+    if (!byGroup[g][c]) byGroup[g][c] = [];
+    byGroup[g][c].push(t);
+  }
+  const groupOrder = [
+    ...DIAGNOSTICS_GROUP_ORDER.filter(g => byGroup[g]),
+    ...Object.keys(byGroup).filter(g => !DIAGNOSTICS_GROUP_ORDER.includes(g)),
+  ];
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
       <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 12 }}>Select a test to run</div>
-      {DIAGNOSTICS_GROUP_ORDER.map(grp => {
-        const cats = grp.categories.filter(c => grouped[c]);
-        if (cats.length === 0) return null;
+      {groupOrder.map(g => {
+        const groupOpen = openGroups.has(g);
+        const cats = byGroup[g];
         return (
-          <div key={grp.group} style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-text-primary)", marginBottom: 10, paddingBottom: 4, borderBottom: "0.5px solid var(--color-border-secondary)" }}>{grp.label}</div>
-            {cats.map(cat => (
-              <div key={cat} style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>
-                  <Icon name={CATEGORY_ICONS[cat] || "info"} size={14} stroke={1.75} />
-                  {cat}
+          <div key={g} style={{ marginBottom: 6 }}>
+            <GroupHeader label={g} open={groupOpen} onClick={() => toggle(setOpenGroups, g)} level={0} />
+            {groupOpen && Object.keys(cats).map(cat => {
+              const catKey = `${g}::${cat}`;
+              const catOpen = openCats.has(catKey);
+              return (
+                <div key={catKey} style={{ marginLeft: 10 }}>
+                  <GroupHeader
+                    label={<span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name={CATEGORY_ICONS[cat] || "info"} size={14} stroke={1.75} />{cat}</span>}
+                    open={catOpen} onClick={() => toggle(setOpenCats, catKey)} level={1}
+                  />
+                  {catOpen && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
+                      {cats[cat].map(t => {
+                        const done = testsRun.includes(t.key);
+                        return (
+                          <button key={t.key} onClick={() => done ? onView(t.key) : onRun(t.key)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)" }}>
+                            <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
+                            <span style={{ fontSize: 11, color: done ? "var(--color-text-info)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{done ? "View result" : (t.cost_tier === "high" ? "High cost" : t.cost_tier === "medium" ? "Medium cost" : "Low cost")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {grouped[cat].map(t => {
-                    const done = testsRun.includes(t.key);
-                    return (
-                      <div key={t.key}>
-                        <button onClick={() => done ? onView(t.key) : onRun(t.key)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: done ? "0.5px solid var(--color-border-tertiary)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", textAlign: "left", background: done ? "var(--color-background-tertiary)" : "var(--color-background-primary)" }}>
-                          <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t.label} {done ? "✓" : ""}</div>
-                          <span style={{ fontSize: 11, color: done ? "var(--color-text-info)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8 }}>{done ? "View result" : (t.cost_tier === "high" ? "High cost" : t.cost_tier === "medium" ? "Medium cost" : "Low cost")}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
@@ -601,12 +609,15 @@ function DiagnosticsPanel({ tests, onRun, onView, testsRun }) {
   );
 }
 
-function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [], onSelect }) {
+// Differentials tab — a REASONING LOG, not a final answer. Clicking a condition
+// logs it as a differential under consideration (POST /input with differential_id).
+// It does not submit a final diagnosis, evaluate accuracy, or end the case. The
+// final diagnosis is chosen later from the logged list, in the Disposition tab.
+function DiagnosisPanel({ diagnoses, onLog, loggedIds = [], loading }) {
   const [query, setQuery] = useState("");
   const [openCats, setOpenCats] = useState(new Set());
 
   const isSearching = query.trim().length > 0;
-  const selectedIds = selectedDiagnoses.map(d => d.id);
 
   const filtered = isSearching
     ? diagnoses.filter(d => d.label.toLowerCase().includes(query.trim().toLowerCase()))
@@ -635,7 +646,7 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "10px 1rem 6px", flexShrink: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 8 }}>Select your diagnosis</div>
+        <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 8 }}>Log differentials you're considering</div>
         <input
           type="text"
           value={query}
@@ -651,8 +662,8 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
         {orderedCats.map(cat => {
           const items = grouped[cat];
           const open = isCatOpen(cat);
-          const doneCount = items.filter(d => attempted.includes(d.id)).length;
-          const selCount = items.filter(d => selectedIds.includes(d.id)).length;
+          const doneCount = items.filter(d => loggedIds.includes(d.id)).length;
+          const selCount = 0;
           return (
             <div key={cat} style={{ marginBottom: 6 }}>
               <button
@@ -678,12 +689,12 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
               {open && (
                 <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderTop: "none", borderRadius: "0 0 var(--border-radius-md) var(--border-radius-md)", overflow: "hidden" }}>
                   {items.map((d, i) => {
-                    const done = attempted.includes(d.id);
-                    const selected = selectedIds.includes(d.id);
+                    const logged = loggedIds.includes(d.id);
                     return (
                       <button
                         key={d.id}
-                        onClick={() => onSelect(d)}
+                        onClick={() => { if (!logged && !loading) onLog(d); }}
+                        disabled={logged || loading}
                         style={{
                           width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
                           padding: "8px 12px",
@@ -692,16 +703,14 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
                           borderBottomWidth: i < items.length - 1 ? "0.5px" : 0,
                           borderBottomStyle: "solid",
                           borderBottomColor: "var(--color-border-tertiary)",
-                          cursor: "pointer", textAlign: "left",
-                          background: selected
-                            ? "var(--color-background-info)"
-                            : done ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
-                          fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected || done ? 500 : 400,
+                          cursor: logged ? "default" : loading ? "wait" : "pointer", textAlign: "left",
+                          background: logged ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
+                          fontSize: 13, color: "var(--color-text-primary)", fontWeight: logged ? 500 : 400,
                         }}
                       >
                         <span>{d.label}</span>
-                        <span style={{ fontSize: 11, color: selected ? "var(--color-text-info)" : "var(--color-text-success, #16a34a)", flexShrink: 0 }}>
-                          {selected ? "✓ Selected" : done ? "✓ Confirmed" : ""}
+                        <span style={{ fontSize: 11, color: "var(--color-text-success, #16a34a)", flexShrink: 0 }}>
+                          {logged ? "✓ Logged" : ""}
                         </span>
                       </button>
                     );
@@ -712,42 +721,177 @@ function DiagnosisPanel({ diagnoses, onConfirm, attempted, selectedDiagnoses = [
           );
         })}
       </div>
-      {/* Confirm button — active when at least one condition selected */}
+      {/* Footer — running tally of logged differentials. This tab never submits a
+          final diagnosis; the final diagnosis is chosen in the Disposition tab. */}
       <div style={{ flexShrink: 0, padding: "10px 1rem", borderTop: "0.5px solid var(--color-border-tertiary)" }}>
-        {selectedDiagnoses.length > 0 && (
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 6 }}>
-            Selected: {selectedDiagnoses.map(d => d.label).join(", ")}
+        {loggedIds.length > 0 ? (
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+            {loggedIds.length} differential{loggedIds.length === 1 ? "" : "s"} logged. Confirm your final diagnosis later in the Disposition tab.
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+            Tap any condition to log it as a differential you're considering.
           </div>
         )}
-        <button
-          onClick={() => selectedDiagnoses.length > 0 && onConfirm(selectedDiagnoses)}
-          disabled={selectedDiagnoses.length === 0}
-          style={{
-            width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none",
-            cursor: selectedDiagnoses.length === 0 ? "not-allowed" : "pointer",
-            background: selectedDiagnoses.length === 0 ? "var(--color-background-tertiary)" : "var(--ds-accent)",
-            color: selectedDiagnoses.length === 0 ? "var(--color-text-secondary)" : "var(--ds-accent-contrast)",
-            fontSize: 13, fontWeight: 500,
-          }}
-        >
-          {selectedDiagnoses.length === 0 ? "Select at least one diagnosis" : `Confirm Diagnosis (${selectedDiagnoses.length})`}
-        </button>
       </div>
     </div>
   );
 }
 
-function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle, onSubmit, onDirectSubmit, onFinalize, pendingTreatments = [], loading, tabId }) {
-  const visibleActions = tabId === "treat_clinic"
-    ? allActions.filter(a => a.type === "injectable" || a.type === "intervention")
-    : allActions.filter(a => a.type === "oral" || a.type === "topical");
-  const grouped = groupActionsByType(visibleActions);
+// ─── Treatment tab grouping layouts ─────────────────────────────────────────
+// Frontend-only grouping. actions.json `category` values are NOT changed.
+// Leaf group: { label, categories?, ids? }. Parent group: { label, subgroups: [...] }.
+// `ids` route a specific action into a group regardless of its category and take
+// precedence over `categories`. Every configured group renders even when empty.
+const TREATMENT_LAYOUTS = {
+  stabilize: [
+    { label: "Fluids", categories: ["Crystalloids & Colloids"], ids: ["int_iv_catheter_emergency"] },
+    { label: "Pain & Sedation", categories: ["Meds - Pain & Sedation"] },
+    { label: "Cardiac & Vasopressors", categories: ["Meds - Cardiac"] },
+    { label: "Airway & Resuscitation", categories: ["Airway & Breathing", "Emergency Resuscitation"] },
+    { label: "Decompression", categories: ["Decompression & Drainage"] },
+    { label: "Metabolic", categories: ["Meds - Endocrine"] },
+    { label: "Toxicology & Antidotes", categories: ["Meds - Toxicology"] },
+  ],
+  treat_clinic: [
+    { label: "Fluids", categories: ["Crystalloids & Colloids", "Blood Products & Transfusion"], ids: ["int_iv_catheter_routine"] },
+    { label: "Medications", subgroups: [
+      { label: "Antibiotics & Antifungals", categories: ["Meds - Antibiotics", "Meds - Antifungals"] },
+      { label: "Steroids & Immunomodulators", categories: ["Meds - Steroids", "Meds - Allergy & Skin", "Immunotherapy"], ids: ["int_ecollect"] },
+      { label: "Pain & Sedation", categories: ["Meds - Pain & Sedation"] },
+      { label: "Cardiac & Vasoactive", categories: ["Meds - Cardiac"] },
+      { label: "Gastrointestinal", categories: ["Meds - Gastrointestinal", "Meds - Antiparasitics"], ids: ["int_feeding_tube"] },
+      { label: "Endocrine & Metabolic", categories: ["Meds - Endocrine", "Meds - Reproductive"] },
+      { label: "Respiratory", categories: ["Meds - Respiratory"] },
+      { label: "Hematology", categories: ["Meds - Haematology"] },
+      { label: "Toxicology", categories: ["Meds - Toxicology"] },
+      { label: "Ear & Eye", categories: ["Meds - Ear & Eye"], ids: ["int_ear_flush"] },
+      { label: "Neurology", categories: ["Meds - Neurology"] },
+    ] },
+    { label: "Procedures", subgroups: [
+      { label: "Surgery", categories: ["Surgery — Abdominal", "Surgery — Soft Tissue", "Dental"], ids: ["int_bandage_splint"] },
+      { label: "Decompression & Drainage", categories: ["Decompression & Drainage"] },
+      { label: "Airway & Resuscitation", categories: ["Airway & Breathing", "Emergency Resuscitation"] },
+      { label: "Monitoring", categories: ["Monitoring"] },
+      { label: "Decontamination", categories: ["GI Decontamination"] },
+    ] },
+  ],
+  treat_rx: [
+    { label: "Antibiotics & Antifungals", categories: ["Meds - Antibiotics", "Meds - Antifungals"] },
+    { label: "Steroids & Immunomodulators", categories: ["Meds - Steroids", "Meds - Allergy & Skin"] },
+    { label: "Pain & Sedation", categories: ["Meds - Pain & Sedation"] },
+    { label: "Cardiac & Vasoactive", categories: ["Meds - Cardiac"] },
+    { label: "Gastrointestinal", categories: ["Meds - Gastrointestinal", "Meds - Antiparasitics"] },
+    { label: "Endocrine & Metabolic", categories: ["Meds - Endocrine"] },
+    { label: "Respiratory", categories: ["Meds - Respiratory"] },
+    { label: "Hematology", categories: ["Meds - Haematology"] },
+    { label: "Toxicology", categories: ["Meds - Toxicology"] },
+    { label: "Ear & Eye", categories: ["Meds - Ear & Eye"] },
+    { label: "Neurology", categories: ["Meds - Neurology"] },
+  ],
+};
 
-  // Only "both" actions can be batch-selected; "clinic" actions submit immediately on click
-  const batchSelectedIds = selectedActionIds.filter(id => {
-    const a = allActions.find(x => x.id === id);
-    return a && a.setting === "both";
+// Assign each visible action to exactly one leaf bucket. `ids` win over
+// `categories`; categories are unique within a layout so nothing lands twice.
+// Bucket key is `${groupIndex}` for top-level leaves, `${groupIndex}:${subIndex}`
+// for sub-groups. Actions matching no group are dropped (none do with current data).
+function buildTreatmentBuckets(visibleActions, layout) {
+  const idMap = {}, catMap = {};
+  layout.forEach((g, gi) => {
+    const subs = g.subgroups || [g];
+    subs.forEach((sg, si) => {
+      const key = g.subgroups ? `${gi}:${si}` : `${gi}`;
+      (sg.ids || []).forEach(id => { idMap[id] = key; });
+      (sg.categories || []).forEach(c => { catMap[c] = key; });
+    });
   });
+  const buckets = {};
+  for (const a of visibleActions) {
+    const key = idMap[a.id] !== undefined ? idMap[a.id] : catMap[a.category];
+    if (key === undefined) continue;
+    (buckets[key] = buckets[key] || []).push(a);
+  }
+  return buckets;
+}
+
+function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle, onSubmit, onDirectSubmit, onFinalize, pendingTreatments = [], loading, tabId }) {
+  // Collapsible category groups — all start collapsed.
+  const [openGroups, setOpenGroups] = useState(new Set());
+  const toggleGroup = (key) => setOpenGroups(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  // Filter by the `setting` field per tab (type values in the data are
+  // "medications"/"procedures"/"disposition", so they can't be used here).
+  let visibleActions;
+  if (tabId === "stabilize") visibleActions = allActions.filter(a => a.setting === "stabilize" && a.type !== "disposition");
+  else if (tabId === "treat_clinic") visibleActions = allActions.filter(a => a.setting === "clinic" && a.type !== "disposition" && a.category !== "Disposition / Referral");
+  else visibleActions = allActions.filter(a => a.setting === "home" && a.type !== "disposition"); // treat_rx
+
+  // Config-driven grouping (see TREATMENT_LAYOUTS) — groups render from the layout,
+  // not from the categories present, so empty groups still show a collapsed header.
+  const layout = TREATMENT_LAYOUTS[tabId] || [];
+  const buckets = buildTreatmentBuckets(visibleActions, layout);
+
+  // Only in-clinic ("clinic") actions on the Interventions tab apply immediately;
+  // everything else (home / stabilize) uses the multi-select batch flow.
+  const isDirectApply = (a) => tabId === "treat_clinic" && a.setting === "clinic";
+  const batchEligible = visibleActions.filter(a => !isDirectApply(a));
+  const batchSelectedIds = selectedActionIds.filter(id => batchEligible.some(a => a.id === id));
+  const hasBatchActions = batchEligible.length > 0;
+  const confirmLabel = tabId === "stabilize" ? "Confirm Stabilization Plan" : "Complete Prescription";
+
+  // One action row — direct-apply button (clinic on Interventions) or batch checkbox.
+  const renderAction = (action) => {
+    if (isDirectApply(action)) {
+      const isApplied = pendingTreatments.includes(action.id);
+      return (
+        <button
+          key={action.id}
+          onClick={() => !loading && onDirectSubmit(action.id)}
+          disabled={loading}
+          style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "9px 12px", borderRadius: "var(--border-radius-md)",
+            border: isApplied ? "0.5px solid var(--color-border-success, #6ee7b7)" : "0.5px solid var(--color-border-secondary)",
+            cursor: loading ? "not-allowed" : "pointer", textAlign: "left",
+            background: isApplied ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
+            opacity: loading ? 0.6 : 1, width: "100%",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{action.name}</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
+          </div>
+          <span style={{ fontSize: 10, color: isApplied ? "var(--color-text-success, #16a34a)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{isApplied ? "✓ Applied" : "Apply"}</span>
+        </button>
+      );
+    }
+    const selected = selectedActionIds.includes(action.id);
+    return (
+      <label key={action.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: selected ? "0.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", background: selected ? "var(--color-background-info)" : "var(--color-background-primary)", transition: "background 0.15s" }}>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle(action.id)}
+          style={{ marginTop: 2, flexShrink: 0, accentColor: "var(--color-text-info)" }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected ? 500 : 400 }}>{action.name}</div>
+          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
+        </div>
+      </label>
+    );
+  };
+
+  // Action list for a single leaf bucket (renders nothing when the bucket is empty).
+  const renderBucket = (key) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+      {(buckets[key] || []).map(renderAction)}
+    </div>
+  );
 
   if (!actionsLoaded) {
     return (
@@ -766,64 +910,44 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
     );
   }
 
-  const hasBatchActions = visibleActions.some(a => a.setting === "both");
-
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
-      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>Select treatments</div>
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>{tabId === "stabilize" ? "Select stabilization actions" : "Select treatments"}</div>
       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>Reason from mechanism, not drug name.</div>
 
-      {ACTION_TYPE_ORDER.filter(t => grouped[t]?.length).map(type => (
-        <div key={type} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 500, marginBottom: 6 }}>{ACTION_TYPE_LABELS[type]}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {grouped[type].map(action => {
-              if (action.setting === "clinic") {
-                // Single-click adds to the treatment plan; game does not end until Finalize.
-                const isApplied = pendingTreatments.includes(action.id);
-                return (
-                  <button
-                    key={action.id}
-                    onClick={() => !loading && onDirectSubmit(action.id)}
-                    disabled={loading}
-                    style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "9px 12px", borderRadius: "var(--border-radius-md)",
-                      border: isApplied ? "0.5px solid var(--color-border-success, #6ee7b7)" : "0.5px solid var(--color-border-secondary)",
-                      cursor: loading ? "not-allowed" : "pointer", textAlign: "left",
-                      background: isApplied ? "var(--color-background-success, #f0fdf4)" : "var(--color-background-primary)",
-                      opacity: loading ? 0.6 : 1, width: "100%",
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{action.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
-                    </div>
-                    <span style={{ fontSize: 10, color: isApplied ? "var(--color-text-success, #16a34a)" : "var(--color-text-secondary)", flexShrink: 0, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{isApplied ? "✓ Applied" : "Apply"}</span>
-                  </button>
-                );
-              } else {
-                // Batch checkbox flow for "both" actions
-                const selected = selectedActionIds.includes(action.id);
-                return (
-                  <label key={action.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", border: selected ? "0.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)", cursor: "pointer", background: selected ? "var(--color-background-info)" : "var(--color-background-primary)", transition: "background 0.15s" }}>
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => onToggle(action.id)}
-                      style={{ marginTop: 2, flexShrink: 0, accentColor: "var(--color-text-info)" }}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: selected ? 500 : 400 }}>{action.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{action.cost_tier === "high" ? "High cost" : action.cost_tier === "medium" ? "Medium cost" : "Low cost"}</div>
-                    </div>
-                  </label>
-                );
-              }
-            })}
+      {layout.map((g, gi) => {
+        const gKey = `${tabId}:g${gi}`;
+        const open = openGroups.has(gKey);
+        if (g.subgroups) {
+          // Two-level group: top header expands to sub-group headers, not actions.
+          return (
+            <div key={gKey} style={{ marginBottom: 6 }}>
+              <GroupHeader label={g.label} open={open} onClick={() => toggleGroup(gKey)} level={0} />
+              {open && (
+                <div style={{ marginLeft: 10 }}>
+                  {g.subgroups.map((sg, si) => {
+                    const sKey = `${tabId}:g${gi}:s${si}`;
+                    const sOpen = openGroups.has(sKey);
+                    return (
+                      <div key={sKey} style={{ marginBottom: 4 }}>
+                        <GroupHeader label={sg.label} open={sOpen} onClick={() => toggleGroup(sKey)} level={1} />
+                        {sOpen && renderBucket(`${gi}:${si}`)}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
+        // Single-level leaf group: header expands directly to actions.
+        return (
+          <div key={gKey} style={{ marginBottom: 6 }}>
+            <GroupHeader label={g.label} open={open} onClick={() => toggleGroup(gKey)} level={0} />
+            {open && renderBucket(`${gi}`)}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {tabId === "treat_clinic" && pendingTreatments.length > 0 && (
         <div style={{ paddingTop: 12, borderTop: "0.5px solid var(--color-border-tertiary)" }}>
@@ -852,7 +976,7 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
             disabled={loading || batchSelectedIds.length === 0}
             style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none", cursor: batchSelectedIds.length === 0 || loading ? "not-allowed" : "pointer", background: batchSelectedIds.length === 0 ? "var(--color-background-tertiary)" : "var(--ds-accent)", color: batchSelectedIds.length === 0 ? "var(--color-text-secondary)" : "var(--ds-accent-contrast)", fontSize: 13, fontWeight: 500, opacity: loading ? 0.6 : 1 }}
           >
-            {batchSelectedIds.length === 0 ? "Select at least one prescription" : "Complete Prescription"}
+            {batchSelectedIds.length === 0 ? (tabId === "stabilize" ? "Select at least one action" : "Select at least one prescription") : confirmLabel}
           </button>
         </div>
       )}
@@ -860,8 +984,50 @@ function TreatmentPanel({ allActions, actionsLoaded, selectedActionIds, onToggle
   );
 }
 
-function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, loading }) {
+// Follow-Up Plan options (Phase C). Recheck is single-select, grouped into buckets.
+const RECHECK_BUCKETS = [
+  { bucket: "urgent", label: "Urgent", options: [
+    { id: "prn", label: "PRN — call/return if worse" },
+    { id: "24_48h", label: "24–48 hours" },
+    { id: "3_4d", label: "3–4 days" },
+  ] },
+  { bucket: "short_term", label: "Short-term", options: [
+    { id: "7_10d", label: "7–10 days" },
+    { id: "2_weeks", label: "2 weeks" },
+    { id: "4_weeks", label: "4 weeks" },
+  ] },
+  { bucket: "long_term", label: "Long-term", options: [
+    { id: "3_months", label: "3 months" },
+    { id: "6_months", label: "6 months" },
+    { id: "12_months", label: "12 months" },
+  ] },
+  { bucket: "none", label: "No recheck", options: [
+    { id: "none", label: "No recheck needed" },
+  ] },
+];
+const MONITORING_LABS = [
+  { id: "none", label: "None" },
+  { id: "cbc", label: "CBC" },
+  { id: "renal", label: "Renal panel" },
+  { id: "hepatic", label: "Hepatic panel" },
+  { id: "electrolytes", label: "Electrolytes" },
+  { id: "urinalysis", label: "Urinalysis" },
+  { id: "t4", label: "T4" },
+  { id: "acth_stim", label: "ACTH stimulation test" },
+  { id: "drug_level", label: "Drug level" },
+];
+
+function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, loading,
+  loggedDifferentials = [], finalDxSelected = [], onToggleFinalDx, onConfirmFinalDx, finalDiagnosis,
+  caseHasSecondary = false, followUpPlan = { recheckId: null, recheckBucket: null, labs: [] }, onSetRecheck, onToggleLab }) {
   const [confirmPending, setConfirmPending] = useState(false);
+
+  // Case-end gate (B1): a final diagnosis must be confirmed before the consult can close.
+  const diagnosisConfirmed = !!finalDiagnosis;
+  const finalDxCount = (finalDiagnosis?.conditionIds || []).length;
+  // Soft multi-diagnosis signals (B2/B3) — informational only, never block.
+  const showSecondaryHardNote = caseHasSecondary && diagnosisConfirmed && finalDxCount < 2;
+  const showSecondarySoftHint = caseHasSecondary && (!diagnosisConfirmed || finalDxCount === 1);
 
   const handleSelect = (action) => {
     if (selected === action.id) {
@@ -883,26 +1049,136 @@ function DispositionPanel({ dispositionActions, selected, onSelect, onConfirm, l
     setConfirmPending(false);
   };
 
+  const submittedIds = finalDiagnosis?.conditionIds || [];
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+      {/* ── FINAL DIAGNOSIS PICKER ── multi-select, drawn ONLY from logged
+          differentials. Submits to the existing diagnosis-evaluation path. It does
+          not end the case (the disposition actions below still do that). */}
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>Final Diagnosis</div>
+      {loggedDifferentials.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 18, padding: "8px 10px", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)" }}>
+          Log the differentials you're considering in the Differentials tab first — your final diagnosis is chosen from that list.
+        </div>
+      ) : (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+            Choose your final diagnosis from your logged differentials. Select more than one if the case has a primary and a secondary condition.
+            {showSecondarySoftHint && <span style={{ display: "block", marginTop: 4, fontStyle: "italic" }}>This case may have more than one diagnosis.</span>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {loggedDifferentials.map(d => {
+              const isSel = finalDxSelected.includes(d.id);
+              const wasSubmitted = submittedIds.includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => onToggleFinalDx(d.id)}
+                  disabled={loading}
+                  style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "10px 14px", borderRadius: "var(--border-radius-md)", textAlign: "left", width: "100%",
+                    border: isSel ? "1.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)",
+                    background: isSel ? "var(--color-background-info)" : "var(--color-background-primary)",
+                    cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1,
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: isSel ? 500 : 400 }}>{d.label}</span>
+                  <span style={{ fontSize: 11, flexShrink: 0, marginLeft: 8, color: isSel ? "var(--color-text-info)" : "var(--color-text-success, #16a34a)" }}>
+                    {isSel ? "✓ Selected" : wasSubmitted ? "Submitted" : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => finalDxSelected.length > 0 && onConfirmFinalDx(finalDxSelected)}
+            disabled={finalDxSelected.length === 0 || loading}
+            style={{
+              width: "100%", marginTop: 10, padding: "10px 12px", borderRadius: "var(--border-radius-md)", border: "none",
+              cursor: finalDxSelected.length === 0 || loading ? "not-allowed" : "pointer",
+              background: finalDxSelected.length === 0 ? "var(--color-background-tertiary)" : "var(--ds-accent)",
+              color: finalDxSelected.length === 0 ? "var(--color-text-secondary)" : "var(--ds-accent-contrast)",
+              fontSize: 13, fontWeight: 500,
+            }}
+          >
+            {finalDxSelected.length === 0 ? "Select at least one diagnosis" : `Confirm Final Diagnosis (${finalDxSelected.length})`}
+          </button>
+          {submittedIds.length > 0 && (
+            <div style={{ fontSize: 12, color: "var(--color-text-success, #16a34a)", marginTop: 8 }}>
+              Final diagnosis recorded: {finalDiagnosis.attempts ? finalDiagnosis.attempts.map(a => a.conditionLabel).join(", ") : loggedDifferentials.filter(d => submittedIds.includes(d.id)).map(d => d.label).join(", ")}.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* B2 — soft (non-blocking) multi-diagnosis note. Yellow, not red. */}
+      {showSecondaryHardNote && (
+        <div style={{ fontSize: 12, color: "var(--color-text-warning, #92400e)", marginBottom: 18, padding: "8px 10px", background: "var(--color-background-warning, #fffbeb)", border: "0.5px solid var(--color-border-warning, #fcd34d)", borderRadius: "var(--border-radius-md)" }}>
+          This case has more than one diagnosis.
+        </div>
+      )}
+
+      {/* ── FOLLOW-UP PLAN (Phase C) ── always visible; submitted with the disposition. */}
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 6 }}>Follow-Up Plan</div>
+      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 10 }}>Recheck timing</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+        {RECHECK_BUCKETS.map(group => (
+          <div key={group.bucket}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-text-secondary)", borderBottom: "0.5px solid var(--color-border-tertiary)", paddingBottom: 3, marginBottom: 6 }}>{group.label}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {group.options.map(opt => {
+                const checked = followUpPlan.recheckId === opt.id;
+                return (
+                  <label key={opt.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-primary)", cursor: loading ? "not-allowed" : "pointer", padding: "3px 2px" }}>
+                    <input type="radio" name="followup-recheck" checked={checked} disabled={loading} onChange={() => onSetRecheck(opt.id, group.bucket)} style={{ cursor: loading ? "not-allowed" : "pointer" }} />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>Monitoring labs</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", marginBottom: 18 }}>
+        {MONITORING_LABS.map(lab => {
+          const checked = (followUpPlan.labs || []).includes(lab.id);
+          return (
+            <label key={lab.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-primary)", cursor: loading ? "not-allowed" : "pointer", padding: "3px 2px" }}>
+              <input type="checkbox" checked={checked} disabled={loading} onChange={() => onToggleLab(lab.id)} style={{ cursor: loading ? "not-allowed" : "pointer" }} />
+              {lab.label}
+            </label>
+          );
+        })}
+      </div>
+
       <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 4 }}>Disposition</div>
       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, padding: "8px 10px", background: "var(--color-background-warning, #fffbeb)", border: "0.5px solid var(--color-border-warning, #fcd34d)", borderRadius: "var(--border-radius-md)" }}>
         Select after completing treatment. This will end the consultation.
       </div>
+      {/* B1 — hard lock: disposition cannot be chosen until a final diagnosis is confirmed. */}
+      {!diagnosisConfirmed && (
+        <div style={{ fontSize: 13, color: "var(--color-text-danger, #b91c1c)", fontWeight: 500, marginBottom: 12, padding: "10px 12px", background: "var(--color-background-danger, #fef2f2)", border: "0.5px solid var(--color-border-danger, #fca5a5)", borderRadius: "var(--border-radius-md)" }}>
+          Confirm your final diagnosis above before closing the consult.
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {dispositionActions.map(action => {
           const isSelected = selected === action.id;
+          const dispoDisabled = loading || !diagnosisConfirmed;
           return (
             <button
               key={action.id}
               onClick={() => handleSelect(action)}
-              disabled={loading}
+              disabled={dispoDisabled}
               style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "11px 14px", borderRadius: "var(--border-radius-md)", textAlign: "left", width: "100%",
                 border: isSelected ? "1.5px solid var(--color-border-info)" : "0.5px solid var(--color-border-secondary)",
                 background: isSelected ? "var(--color-background-info)" : "var(--color-background-primary)",
-                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1,
+                cursor: dispoDisabled ? "not-allowed" : "pointer", opacity: dispoDisabled ? 0.5 : 1,
               }}
             >
               <div>
@@ -939,6 +1215,7 @@ const BREAK_META = {
   outcomeScore: { label: "Patient outcome", icon: "heart" },
   efficiencyScore: { label: "Efficiency", icon: "pulse" },
   trustScore: { label: "Owner trust", icon: "sparkle" },
+  followUpScore: { label: "Follow-up plan", icon: "clipboard" },
 };
 
 function ScoreCounter({ target }) {
@@ -955,7 +1232,10 @@ function ReportCardScreen({ finalState, onRetry, onNewCase }) {
   const o = finalState.outcome;
   const g = GRADE_META[o.grade] || GRADE_META.F;
 
-  const breakdown = ["accuracyScore", "outcomeScore", "efficiencyScore", "trustScore"].map(k => ({ key: k, value: o.breakdown[k], ...BREAK_META[k] }));
+  const breakdown = ["accuracyScore", "outcomeScore", "efficiencyScore", "trustScore", "followUpScore"]
+    .filter(k => o.breakdown[k] !== undefined)
+    .map(k => ({ key: k, value: o.breakdown[k], ...BREAK_META[k] }));
+  const dispositionAdjustment = o.breakdown.dispositionAdjustment;
   const vals = breakdown.map(b => b.value), maxV = Math.max(...vals), minV = Math.min(...vals), same = vals.every(v => v === vals[0]);
   const feedback = [...(o.feedback || [])].sort((a, b) => { const r = s => s.startsWith("✔") ? 0 : s.startsWith("⚠") ? 1 : 2; return r(a) - r(b); });
 
@@ -999,6 +1279,11 @@ function ReportCardScreen({ finalState, onRetry, onNewCase }) {
                   <div style={{ height: 8, borderRadius: 99, background: "var(--color-background-tertiary)", overflow: "hidden" }}>
                     <div style={{ height: "100%", borderRadius: 99, background: col, width: `${b.value}%`, boxShadow: `0 0 10px ${col}66` }} />
                   </div>
+                  {b.key === "outcomeScore" && dispositionAdjustment !== undefined && dispositionAdjustment !== 0 && (
+                    <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--color-text-secondary)" }}>
+                      Disposition: <span style={{ fontWeight: 700, color: dispositionAdjustment < 0 ? "var(--ds-danger)" : "var(--ds-good)" }}>{dispositionAdjustment > 0 ? `+${dispositionAdjustment}` : dispositionAdjustment}</span> to outcome
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1357,7 +1642,7 @@ function SIMLABReportShell({ testKey, patient, ownerName, caseId, children }) {
     orderId: randDigits(9),
   }), [caseId]);
   const dateStr = useMemo(() => todayDDMMYYYY(), []);
-  const grey = "#777";
+  const gray = "#777";
   const cell = { fontSize: 11, lineHeight: 1.6 };
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", background: "#fff", fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
@@ -1365,8 +1650,8 @@ function SIMLABReportShell({ testKey, patient, ownerName, caseId, children }) {
         {/* Zone 1 — branding */}
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: "#1a3a6b" }}>SIMLAB</div>
-          <div style={{ fontSize: 10, color: grey }}>Veterinary Reference Laboratory</div>
-          <div style={{ fontSize: 10, color: grey }}>www.simlab.vet</div>
+          <div style={{ fontSize: 10, color: gray }}>Veterinary Reference Laboratory</div>
+          <div style={{ fontSize: 10, color: gray }}>www.simlab.vet</div>
         </div>
         {/* Zone 2 — patient */}
         <div style={{ flex: "1 1 0", minWidth: 0, ...cell }}>
@@ -1401,8 +1686,8 @@ function SIMLABReportShell({ testKey, patient, ownerName, caseId, children }) {
       </div>
       <div style={{ padding: "10px 18px 16px" }}>{children}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", padding: "8px 18px 16px", borderTop: "1px solid #e0e0e0" }}>
-        <div style={{ fontSize: 10, fontStyle: "italic", color: grey }}>For complete access to this patient's results, login to portal.simlab.vet</div>
-        <div style={{ fontSize: 10, color: grey, marginLeft: 16, flexShrink: 0 }}>PAGE 1 OF 1</div>
+        <div style={{ fontSize: 10, fontStyle: "italic", color: gray }}>For complete access to this patient's results, login to portal.simlab.vet</div>
+        <div style={{ fontSize: 10, color: gray, marginLeft: 16, flexShrink: 0 }}>PAGE 1 OF 1</div>
       </div>
     </div>
   );
@@ -1551,7 +1836,7 @@ function ECGRenderer({ testData }) {
         {vpcPresent && <div style={{ color: "#ffff00", marginTop: 6 }}>*** VENTRICULAR ECTOPY DETECTED ***</div>}
       </div>
       <div style={{ fontSize: 12, marginTop: 10, lineHeight: 1.6 }}>
-        Rhythm interpretation is the responsibility of the attending clinician. This trace requires evaluation before anaesthesia.
+        Rhythm interpretation is the responsibility of the attending clinician. This trace requires evaluation before anesthesia.
       </div>
     </div>
   );
@@ -1658,8 +1943,366 @@ function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, ca
   );
 }
 
+// Builds "reaction"-style chat messages for any missing_baseline events that
+// haven't been surfaced yet (tracked by timestamp). Groups multiple missing
+// categories for the same drug into one line. Returns the new messages plus the
+// updated surfaced-timestamp list.
+function buildBaselineEventMessages(events, surfacedTs) {
+  const surfaced = new Set(surfacedTs || []);
+  const fresh = (events || []).filter(e => e && e.type === "missing_baseline" && !surfaced.has(e.timestamp));
+  if (fresh.length === 0) return { msgs: [], newTs: surfacedTs || [] };
+  const byDrug = {};
+  for (const e of fresh) {
+    (byDrug[e.drugName] = byDrug[e.drugName] || []).push(e.missingCategory);
+    surfaced.add(e.timestamp);
+  }
+  const msgs = Object.entries(byDrug).map(([drug, cats], i) => ({
+    id: Date.now() + 7000 + i,
+    role: "reaction",
+    text: `You started ${drug} without checking ${cats.join(" / ")} function first.`,
+  }));
+  return { msgs, newTs: [...surfaced] };
+}
+
+// ── Patient History chart (History tab) ───────────────────────────────────
+// Renders the case `chart` object (signalment, alerts, intake, prior visits,
+// meds, vaccines, etc.). chart.buried_clue_note is an author-only field and is
+// NEVER rendered here.
+const CHART_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-01-19" → "19 Jan 2026"; null/undefined/unparseable → "—".
+function formatChartDate(d) {
+  if (!d) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d));
+  if (!m) return "—";
+  const [, y, mo, day] = m;
+  const mi = parseInt(mo, 10) - 1;
+  if (mi < 0 || mi > 11) return "—";
+  return `${parseInt(day, 10)} ${CHART_MONTHS[mi]} ${y}`;
+}
+
+const humanizeTag = (t) => String(t).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Latest weight + trend vs second-latest. >+0.2 → up; <-0.2 → down; else stable.
+function weightTrend(history) {
+  if (!Array.isArray(history) || history.length === 0) return null;
+  const sorted = [...history].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const latest = sorted[0];
+  if (!latest || latest.weight_kg == null) return null;
+  const prev = sorted[1];
+  if (!prev || prev.weight_kg == null) return { latest: latest.weight_kg, dir: "stable", delta: 0 };
+  const delta = latest.weight_kg - prev.weight_kg;
+  // EPS absorbs IEEE-754 noise so a genuine ±0.2 delta (e.g. 32.0 − 31.8 →
+  // 0.199999…93) still lands on up/down rather than being swallowed by "stable".
+  const EPS = 1e-9;
+  const dir = delta > 0.2 - EPS ? "up" : delta < -0.2 + EPS ? "down" : "stable";
+  return { latest: latest.weight_kg, dir, delta };
+}
+
+function WeightPill({ trend }) {
+  const tcol = trend.dir === "up" ? "var(--color-text-danger)" : trend.dir === "down" ? "var(--color-text-warning)" : "var(--color-text-secondary)";
+  const arrow = trend.dir === "up" ? "↑" : trend.dir === "down" ? "↓" : "";
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600,
+      padding: "3px 9px", borderRadius: 99, background: "var(--color-background-tertiary)",
+      color: "var(--color-text-primary)", border: "1px solid var(--color-border-tertiary)" }}>
+      {trend.latest.toFixed(1)} kg
+      <span style={{ color: tcol, fontWeight: 700 }}>
+        {trend.dir === "stable" ? "stable" : `${arrow} ${trend.delta > 0 ? "+" : ""}${trend.delta.toFixed(1)} kg`}
+      </span>
+    </span>
+  );
+}
+
+// Visit-type chip. The Warm Clinic palette has no blue/purple tokens, so blue→info
+// and surgery (purple) uses a small custom chip to stay visually distinct.
+const VISIT_TYPE_TONE = { wellness: "success", sick: "warning", recheck: "info", emergency: "danger", telehealth: "neutral" };
+function VisitTypeChip({ type }) {
+  const label = type ? type.charAt(0).toUpperCase() + type.slice(1) : "Visit";
+  if (type === "surgery") {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 600,
+        padding: "3px 9px", borderRadius: 99, background: "#F0E9F8", color: "#6B4E9E",
+        border: "1px solid #D9C9EE", letterSpacing: "0.02em" }}>{label}</span>
+    );
+  }
+  return <Chip tone={VISIT_TYPE_TONE[type] || "neutral"}>{label}</Chip>;
+}
+
+function StatusPill({ status }) {
+  const tone = { current: "success", overdue: "warning", not_done: "neutral" }[status] || "neutral";
+  const label = { current: "Current", overdue: "Overdue", not_done: "Not done" }[status] || status;
+  return <Chip tone={tone}>{label}</Chip>;
+}
+
+function ChartSection({ title, icon, right, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {icon && <span style={{ color: "var(--color-text-secondary)" }}><Icon name={icon} size={15} stroke={2.2} /></span>}
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-text-secondary)" }}>{title}</span>
+        {right && <span style={{ marginLeft: "auto" }}>{right}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const CHART_CARD = { padding: "12px 14px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-primary)", border: "1px solid var(--color-border-tertiary)" };
+
+function PriorVisitRow({ visit }) {
+  const [open, setOpen] = useState(false);
+  const hasSoap = visit.soap_note != null;
+  const soap = visit.soap_note || {};
+  const head = (
+    <>
+      <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{formatChartDate(visit.date)}</span>
+      <VisitTypeChip type={visit.type} />
+      <span style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--color-text-secondary)" }}>{visit.primary_doctor}</span>
+      {hasSoap && (
+        <span style={{ color: "var(--color-text-secondary)", display: "inline-flex", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s ease" }}>
+          <Icon name="chevron" size={15} stroke={2.4} />
+        </span>
+      )}
+    </>
+  );
+  return (
+    <div style={CHART_CARD}>
+      {hasSoap ? (
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", textAlign: "left", font: "inherit", color: "inherit" }}>
+          {head}
+        </button>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>{head}</div>
+      )}
+      <div style={{ fontSize: 12.5, color: "var(--color-text-secondary)", lineHeight: 1.5, marginTop: 6 }}>{visit.summary}</div>
+      {hasSoap && (
+        <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
+          <div style={{ overflow: "hidden" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 9 }}>
+              {[["S", "subjective"], ["O", "objective"], ["A", "assessment"], ["P", "plan"]].map(([lab, key]) => (
+                <div key={key} style={{ display: "flex", gap: 8 }}>
+                  <span style={{ flexShrink: 0, width: 17, height: 17, borderRadius: 5, background: "var(--ds-accent-soft)", color: "var(--color-text-info)", fontSize: 10, fontWeight: 800, display: "grid", placeItems: "center" }}>{lab}</span>
+                  <span style={{ fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.5 }}>{soap[key]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiscontinuedMeds({ meds }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <GroupHeader label={`Discontinued (${meds.length})`} open={open} onClick={() => setOpen((o) => !o)} />
+      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
+        <div style={{ overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 9 }}>
+            {meds.map((m, i) => (
+              <div key={i} style={CHART_CARD}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>{m.drug}</div>
+                <div style={{ fontSize: 11.5, color: "var(--color-text-secondary)", marginTop: 2 }}>Discontinued {formatChartDate(m.discontinued)}</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.45, marginTop: 3 }}>{m.reason}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartStatusRow({ name, date, status, first }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 2px", borderTop: first ? "none" : "1px solid var(--color-border-tertiary)" }}>
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-primary)", minWidth: 92 }}>{name}</span>
+      <span style={{ fontSize: 11.5, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>{formatChartDate(date)}</span>
+      <span style={{ marginLeft: "auto" }}><StatusPill status={status} /></span>
+    </div>
+  );
+}
+
+function HistoryChartPanel({ chart, patient }) {
+  if (!chart) {
+    return (
+      <div style={{ flex: 1, overflowY: "auto", padding: "22px", fontSize: 13, color: "var(--color-text-secondary)" }}>
+        No case file available for this patient.
+      </div>
+    );
+  }
+  const p = patient || {};
+  const meta = chart.patient_meta || {};
+  const trend = weightTrend(meta.weight_history);
+  const clientSinceYear = meta.client_since ? String(meta.client_since).slice(0, 4) : null;
+  const it = chart.intake_today || {};
+  const tt = it.tech_triage || {};
+  const diet = chart.diet || {};
+  const op = chart.owner_panel || {};
+  const alerts = chart.alerts || [];
+  const tags = chart.tags || [];
+  const priorVisits = chart.prior_visits || [];
+  const medsCurrent = chart.medications_current || [];
+  const medsDisc = chart.medications_discontinued || [];
+  const vaccinations = chart.vaccinations || [];
+  const preventives = chart.preventives || [];
+  const recentDx = chart.recent_diagnostics || [];
+  const signalment = [p.breed, p.age != null ? `${p.age} yr` : null, p.sex].filter(Boolean).join(" · ");
+  const mut = { fontSize: 12.5, color: "var(--color-text-secondary)", lineHeight: 1.5 };
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+        {/* (a) Banner */}
+        <div style={{ padding: "14px 16px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "1px solid var(--color-border-tertiary)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)" }}>{p.name || "Patient"}</span>
+            {signalment && <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{signalment}</span>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 11 }}>
+            {meta.microchip && <Chip tone="neutral" icon="info">Chip {meta.microchip}</Chip>}
+            {trend && <WeightPill trend={trend} />}
+            {meta.insurance && <Chip tone="neutral">{meta.insurance}</Chip>}
+            {clientSinceYear && <Chip tone="neutral">Client since {clientSinceYear}</Chip>}
+          </div>
+        </div>
+
+        {/* (b) Tags */}
+        {tags.length > 0 && (
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            {tags.map((t, i) => <Chip key={i} tone="neutral">{humanizeTag(t)}</Chip>)}
+          </div>
+        )}
+
+        {/* (c) Alerts */}
+        {alerts.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {alerts.map((a, i) => {
+              const danger = a.level === "red";
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: "var(--border-radius-md)",
+                  background: danger ? "var(--color-background-danger)" : "var(--color-background-warning)",
+                  border: `1px solid ${danger ? "var(--color-border-danger)" : "var(--color-border-warning)"}` }}>
+                  <span style={{ color: danger ? "var(--color-text-danger)" : "var(--color-text-warning)" }}><Icon name="alert" size={16} stroke={2.2} /></span>
+                  <span style={{ fontSize: 12.5, color: "var(--color-text-primary)", lineHeight: 1.4 }}>{a.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* (d) Today */}
+        <ChartSection title="Today's Visit" icon="clipboard">
+          <div style={CHART_CARD}>
+            {it.booking_reason && <div style={{ fontStyle: "italic", fontSize: 13.5, color: "var(--color-text-primary)", lineHeight: 1.5 }}>“{it.booking_reason}”</div>}
+            {it.booked_via && <div style={{ fontSize: 11.5, color: "var(--color-text-secondary)", marginTop: 4 }}>Booked via {it.booked_via}</div>}
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 10 }}>
+              {tt.temperature_f != null && <Chip tone="neutral">T {tt.temperature_f}°F</Chip>}
+              {tt.heart_rate_bpm != null && <Chip tone="neutral">HR {tt.heart_rate_bpm}</Chip>}
+              {tt.respiratory_rate_bpm != null && <Chip tone="neutral">RR {tt.respiratory_rate_bpm}</Chip>}
+              {tt.bcs_9point != null && <Chip tone="neutral">BCS {tt.bcs_9point}/9</Chip>}
+            </div>
+            {tt.tech_note && <div style={{ fontSize: 12, fontStyle: "italic", color: "var(--color-text-secondary)", lineHeight: 1.45, marginTop: 9 }}>{tt.tech_note}</div>}
+          </div>
+        </ChartSection>
+
+        {/* (e) Prior visits — given order, do NOT re-sort */}
+        <ChartSection title="Prior Visits" icon="chat">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {priorVisits.map((v, i) => <PriorVisitRow key={i} visit={v} />)}
+          </div>
+        </ChartSection>
+
+        {/* (f) Current medications */}
+        <ChartSection title="Current Medications" icon="pill">
+          {medsCurrent.length === 0 ? (
+            <div style={mut}>No active medications.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {medsCurrent.map((m, i) => (
+                <div key={i} style={CHART_CARD}>
+                  <div style={{ fontSize: 13.5, color: "var(--color-text-primary)" }}><b>{m.drug}</b> {m.dose}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--color-text-secondary)", marginTop: 3 }}>
+                    Started {formatChartDate(m.started)} · {m.refills_remaining} refills · Last filled {formatChartDate(m.last_filled)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ChartSection>
+
+        {/* (g) Discontinued medications — collapsible, omit if empty */}
+        {medsDisc.length > 0 && (
+          <ChartSection title="Medication History" icon="pill">
+            <DiscontinuedMeds meds={medsDisc} />
+          </ChartSection>
+        )}
+
+        {/* (h) Vaccinations */}
+        <ChartSection title="Vaccinations" icon="syringe">
+          <div style={CHART_CARD}>
+            {vaccinations.map((v, i) => <ChartStatusRow key={i} first={i === 0} name={v.vaccine} date={v.last_given} status={v.status} />)}
+          </div>
+        </ChartSection>
+
+        {/* (i) Preventives */}
+        <ChartSection title="Preventives" icon="shield">
+          <div style={CHART_CARD}>
+            {preventives.map((v, i) => <ChartStatusRow key={i} first={i === 0} name={v.product} date={v.last_given} status={v.status} />)}
+          </div>
+        </ChartSection>
+
+        {/* (j) Recent diagnostics */}
+        <ChartSection title="Recent Diagnostics" icon="flask">
+          {recentDx.length === 0 ? (
+            <div style={mut}>No recent diagnostics on file.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {recentDx.map((d, i) => (
+                <div key={i} style={CHART_CARD}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11.5, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>{formatChartDate(d.date)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>{d.test}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5, marginTop: 4 }}>{d.result_summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ChartSection>
+
+        {/* (k) Diet */}
+        <ChartSection title="Diet" icon="bone">
+          <div style={CHART_CARD}>
+            {diet.current_food && <div style={{ fontSize: 13.5, color: "var(--color-text-primary)" }}><b>{diet.current_food}</b></div>}
+            {diet.feeding && <div style={{ ...mut, marginTop: 3 }}>{diet.feeding}</div>}
+            {diet.treats && <div style={{ ...mut, marginTop: 2 }}>Treats: {diet.treats}</div>}
+            {diet.diet_history_note && <div style={{ fontSize: 12, fontStyle: "italic", color: "var(--color-text-secondary)", lineHeight: 1.45, marginTop: 7 }}>{diet.diet_history_note}</div>}
+          </div>
+        </ChartSection>
+
+        {/* (l) Owner */}
+        <ChartSection title="Owner" icon="info">
+          <div style={CHART_CARD}>
+            <div style={mut}>Communication: {op.communication_preference || "—"}</div>
+            <div style={{ ...mut, marginTop: 3 }}>{op.account_balance_usd === 0 ? "$0 — balance clear" : `$${op.account_balance_usd} balance`}</div>
+            <div style={{ ...mut, marginTop: 2 }}>YTD spend: ${op.ytd_spend_usd} at this clinic</div>
+            {op.account_notes && <div style={{ fontSize: 12, fontStyle: "italic", color: "var(--color-text-secondary)", lineHeight: 1.5, marginTop: 7 }}>{op.account_notes}</div>}
+          </div>
+        </ChartSection>
+
+      </div>
+    </div>
+  );
+}
+
 function initState() {
-  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], dispositionSelected: null, dispositionConfirmPending: false };
+  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], differentialsLog: [], finalDxSelected: [], finalDiagnosis: null, surfacedEventTs: [], followUpPlan: { recheckId: null, recheckBucket: null, labs: [] }, dispositionSelected: null, dispositionConfirmPending: false };
 }
 
 export default function App() {
@@ -1722,16 +2365,17 @@ export default function App() {
       return dlower.includes(lower) || lower.includes(dlower);
     });
     if (!match) return false;
-    const alreadySelected = s.selectedDiagnoses.some(d => d.id === match.id);
-    const newSelected = alreadySelected ? s.selectedDiagnoses : [...s.selectedDiagnoses, match];
-    const systemMsg = { id: Date.now(), role: "narrator", speaker: "narrator", text: `Found in differentials: ${match.label} — confirm in the Make diagnosis tab`, effects: [] };
+    const alreadyLogged = s.differentialsLog.some(d => d.id === match.id);
+    const systemMsg = { id: Date.now(), role: "narrator", speaker: "narrator", text: alreadyLogged
+      ? `"${match.label}" is already in your differentials log.`
+      : `Logged to differentials: ${match.label}. Confirm your final diagnosis later in the Disposition tab.`, effects: [] };
     setS(prev => ({
       ...prev,
       input: "",
       messages: [...prev.messages, { id: Date.now() - 1, role: "player", text }, systemMsg],
-      selectedDiagnoses: newSelected,
       activeTab: "dx",
     }));
+    if (!alreadyLogged) logDifferential(match);
     return true;
   }
 
@@ -1793,6 +2437,7 @@ export default function App() {
           diagnosticModal,
           examResults,
           examHealthImpacts,
+          differentialsLog: data.state.differentials_log || prev.differentialsLog,
           loading: false,
           ...(data.data?.finalResult ? { screen: "results", finalState: data.state } : {}),
         };
@@ -1801,28 +2446,76 @@ export default function App() {
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
-  async function sendTreatment(actionIds, shouldFinalise = false) {
+  async function sendTreatment(actionIds, shouldFinalise = false, followUpPlan = null) {
     if (!actionIds.length && !shouldFinalise) return;
     if (s.loading || !s.sessionId) return;
     patch({ loading: true, error: null });
     try {
-      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action_ids: actionIds, sessionId: s.sessionId, caseId: s.caseId, finalise: shouldFinalise }) });
+      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action_ids: actionIds, sessionId: s.sessionId, caseId: s.caseId, finalise: shouldFinalise, ...(followUpPlan ? { follow_up_plan: followUpPlan } : {}) }) });
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       const newMsgs = [];
       if (data.reaction) newMsgs.push({ id: Date.now() + 1, role: "reaction", text: data.reaction.dialogue, trustDelta: data.reaction.trustDelta > 0 ? `+${data.reaction.trustDelta}` : `${data.reaction.trustDelta}`, newEmotion: data.reaction.newEmotion });
       const role = data.speaker === "outcome" ? "outcome" : (data.speaker || "narrator");
       newMsgs.push({ id: Date.now() + 2, role, speaker: data.speaker, text: data.dialogue || data.message, effects: data.effects || [] });
+      setS(prev => {
+        // B4 — surface any new missing_baseline events as chat reactions.
+        const { msgs: baselineMsgs, newTs } = buildBaselineEventMessages(data.state.events, prev.surfacedEventTs);
+        return {
+          ...prev,
+          messages: [...prev.messages, ...newMsgs, ...baselineMsgs],
+          surfacedEventTs: newTs,
+          scores: data.state.scores,
+          emotion: data.state.client.emotion,
+          actions: data.state.actions_taken,
+          selectedActionIds: [],
+          pendingTreatments: data.state.treatment_action_ids || [],
+          differentialsLog: data.state.differentials_log || prev.differentialsLog,
+          loading: false,
+          ...(data.data?.finalResult ? { screen: "results", finalState: data.state } : {}),
+        };
+      });
+    } catch (e) { patch({ error: "Could not reach backend. Is the server running on port 3000?", loading: false }); }
+  }
+
+  // Logs a differential under consideration (Differentials tab). Posts the
+  // structured differential_id field — never free text — so the backend routes it
+  // to log_differential. This does NOT submit a final diagnosis or end the case.
+  async function logDifferential(diag) {
+    if (!diag || s.loading || !s.sessionId) return;
+    patch({ loading: true, error: null });
+    try {
+      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ differential_id: diag.id, sessionId: s.sessionId, caseId: s.caseId }) });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
       setS(prev => ({
         ...prev,
-        messages: [...prev.messages, ...newMsgs],
+        differentialsLog: data.state.differentials_log || prev.differentialsLog,
         scores: data.state.scores,
         emotion: data.state.client.emotion,
-        actions: data.state.actions_taken,
-        selectedActionIds: [],
-        pendingTreatments: data.state.treatment_action_ids || [],
         loading: false,
-        ...(data.data?.finalResult ? { screen: "results", finalState: data.state } : {}),
+      }));
+    } catch (e) { patch({ error: "Could not reach backend. Is the server running on port 3000?", loading: false }); }
+  }
+
+  // Submits the player's final diagnosis (Disposition tab). Posts the structured
+  // diagnosis_ids array to the existing diagnosis-evaluation path. This records
+  // accuracy but does NOT end the case (case-ending is unchanged).
+  async function submitFinalDiagnosis(ids) {
+    if (!ids || !ids.length || s.loading || !s.sessionId) return;
+    patch({ loading: true, error: null });
+    try {
+      const res = await fetch(`${API}/input`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ diagnosis_ids: ids, sessionId: s.sessionId, caseId: s.caseId }) });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setS(prev => ({
+        ...prev,
+        scores: data.state.scores,
+        emotion: data.state.client.emotion,
+        finalDiagnosis: data.state.final_diagnosis || prev.finalDiagnosis,
+        differentialsLog: data.state.differentials_log || prev.differentialsLog,
+        finalDxSelected: [],
+        loading: false,
       }));
     } catch (e) { patch({ error: "Could not reach backend. Is the server running on port 3000?", loading: false }); }
   }
@@ -1837,13 +2530,14 @@ export default function App() {
 
   const DRAWER_META = {
     ask:           { title: "Talk with the owner", sub: "Ask about the history, diet and home care.", icon: "chat" },
-    exam:          { title: "Physical exam", sub: "Tap an area on the patient to examine it.", icon: "stethoscope" },
-    history:       { title: `${patientName} — patient chart`, sub: "Signalment, history & intake notes.", icon: "clipboard" },
-    diag:          { title: "Diagnostics bench", sub: "Choose a sample or scan to run at the bench.", icon: "microscope" },
-    dx:            { title: "Differential list", sub: "Select the diagnoses you're weighing, then confirm.", icon: "list" },
-    treat_clinic:  { title: "Injectable & in-clinic treatments", sub: "From the fridge & trolley — build a plan, then administer.", icon: "syringe" },
-    treat_rx:      { title: "Oral & topical medications", sub: "From the pharmacy — build the script, then dispense.", icon: "pill" },
-    disposition:   { title: "Close the consult", sub: "Decide where the patient goes next — this ends the visit.", icon: "door" },
+    exam:          { title: "Physical Exam", sub: "Tap an area on the patient to examine it", icon: "stethoscope" },
+    stabilize:     { title: "Stabilize the Patient", sub: "Urgent actions to support a critical patient", icon: "heart" },
+    history:       { title: `${patientName} — Case File`, sub: "Patient file — chart review before the consult.", icon: "clipboard" },
+    diag:          { title: "Diagnostics", sub: "Order in-house tests, send to the lab, or request a specialist referral", icon: "microscope" },
+    dx:            { title: "Differential List", sub: "Log the diagnoses you're considering — confirm a final diagnosis later", icon: "list" },
+    treat_clinic:  { title: "Interventions", sub: "Select in-clinic treatments and procedures, then administer", icon: "syringe" },
+    treat_rx:      { title: "Prescriptions", sub: "Choose medications and treatments to send home with the owner", icon: "pill" },
+    disposition:   { title: "Close the Consult", sub: "Decide final steps and follow-up to end the visit", icon: "door" },
   };
 
   function renderDrawerBody() {
@@ -1866,27 +2560,21 @@ export default function App() {
         );
       case "exam":
         return <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} />;
+      case "stabilize":
+        // Multi-select plan builder for emergency stabilization actions
+        // (setting === "stabilize"). Reuses TreatmentPanel; confirming applies
+        // the selected actions without finalising the consult.
+        return <TreatmentPanel allActions={s.allActions.filter(a => a.type !== "disposition")} actionsLoaded={s.actionsLoaded} selectedActionIds={s.selectedActionIds} onToggle={id => patch({ selectedActionIds: s.selectedActionIds.includes(id) ? s.selectedActionIds.filter(x => x !== id) : [...s.selectedActionIds, id] })} onSubmit={() => sendTreatment(s.selectedActionIds, false)} onDirectSubmit={id => sendTreatment([id], false)} onFinalize={() => sendTreatment([], false)} pendingTreatments={s.pendingTreatments} loading={s.loading} tabId="stabilize" />;
       case "history":
-        return <HistoryPanelBody patient={patient} />;
+        return <HistoryChartPanel chart={s.sessionData?.state.case.chart} patient={patient} />;
       case "diag":
         return <DiagnosticsPanel tests={s.allDiagnostics} onRun={(key) => send(`test:${key}`)} onView={openDiagnosticModal} testsRun={s.testsRun} />;
       case "dx":
         return <DiagnosisPanel
           diagnoses={s.allDiagnoses}
-          attempted={s.diagnosisAttempted}
-          selectedDiagnoses={s.selectedDiagnoses}
-          onSelect={d => {
-            const alreadySelected = s.selectedDiagnoses.some(x => x.id === d.id);
-            patch({ selectedDiagnoses: alreadySelected ? s.selectedDiagnoses.filter(x => x.id !== d.id) : [...s.selectedDiagnoses, d] });
-          }}
-          onConfirm={async (selected) => {
-            const newAttempted = [...s.diagnosisAttempted];
-            for (const d of selected) {
-              if (!newAttempted.includes(d.id)) newAttempted.push(d.id);
-              await send(`diagnose:${d.id}`);
-            }
-            patch({ diagnosisAttempted: newAttempted, selectedDiagnoses: [] });
-          }}
+          loggedIds={s.differentialsLog.map(d => d.id)}
+          loading={s.loading}
+          onLog={d => logDifferential(d)}
         />;
       case "treat_clinic":
       case "treat_rx":
@@ -1896,8 +2584,26 @@ export default function App() {
           dispositionActions={s.allActions.filter(a => a.type === "disposition")}
           selected={s.dispositionSelected}
           onSelect={id => patch({ dispositionSelected: id })}
-          onConfirm={id => { patch({ dispositionSelected: null }); sendTreatment([id], true); }}
+          onConfirm={id => { patch({ dispositionSelected: null }); sendTreatment([id], true, s.followUpPlan); }}
           loading={s.loading}
+          loggedDifferentials={s.differentialsLog}
+          finalDxSelected={s.finalDxSelected}
+          finalDiagnosis={s.finalDiagnosis}
+          caseHasSecondary={!!(s.sessionData?.state.case.has_secondary_condition || s.sessionData?.state.case.secondary_condition)}
+          onToggleFinalDx={id => patch({ finalDxSelected: s.finalDxSelected.includes(id) ? s.finalDxSelected.filter(x => x !== id) : [...s.finalDxSelected, id] })}
+          onConfirmFinalDx={ids => submitFinalDiagnosis(ids)}
+          followUpPlan={s.followUpPlan}
+          onSetRecheck={(recheckId, recheckBucket) => patch({ followUpPlan: { ...s.followUpPlan, recheckId, recheckBucket } })}
+          onToggleLab={labId => {
+            const cur = s.followUpPlan.labs || [];
+            let next;
+            if (labId === "none") {
+              next = cur.includes("none") ? [] : ["none"];
+            } else {
+              next = cur.includes(labId) ? cur.filter(x => x !== labId) : [...cur.filter(x => x !== "none"), labId];
+            }
+            patch({ followUpPlan: { ...s.followUpPlan, labs: next } });
+          }}
         />;
       default:
         return null;
@@ -1912,7 +2618,7 @@ export default function App() {
         patient={patient}
         caseId={s.caseId}
         presentingComplaint={s.sessionData?.state.case.presenting_complaint}
-        diffCount={s.selectedDiagnoses.length}
+        diffCount={s.differentialsLog.length}
         examCount={s.examFindings.length}
         spend={s.scores.cost}
         activeDrawer={s.activeTab}
