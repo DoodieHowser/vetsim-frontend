@@ -8,7 +8,8 @@ import { Icon } from "../ui/DesignKit";
 const CANVAS_W = 1280, CANVAS_H = 800;
 
 // the eight room actions → app tab ids (id === App's activeTab value).
-// "history" is a visual placeholder only (no backend), per design rule.
+// "history" renders HistoryChartPanel from the case `chart` object (built).
+// "stabilize" renders TreatmentPanel filtered to setting === "stabilize".
 export const NAV = [
   { id: "exam",          label: "Examine",      icon: "stethoscope" },
   { id: "ask",           label: "Ask owner",    icon: "chat" },
