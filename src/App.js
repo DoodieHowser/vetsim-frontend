@@ -1937,6 +1937,232 @@ function ECGRenderer({ testData }) {
   );
 }
 
+// ─── WoodsLampRenderer ─────────────────────────────────────────────────────
+function WoodsLampRenderer({ testData }) {
+  const canvasRef = useRef(null);
+  const recipe = testData?.render_recipe || {};
+  const fluorescence = !!recipe.fluorescence;
+  const patchShape = recipe.patch_shape || "focal";
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W = 500, H = 500, cx = 250, cy = 250, R = 230;
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+    ctx.clip();
+
+    ctx.fillStyle = "#1a0a2e";
+    ctx.fillRect(0, 0, W, H);
+
+    // Deterministic hair texture to avoid re-render flicker
+    ctx.strokeStyle = "rgba(80, 40, 100, 0.45)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 50; i++) {
+      const x = 20 + (i * 47 + 13) % 460;
+      const y = 20 + (i * 83 + 37) % 460;
+      const dx = ((i * 29) % 40) - 20;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(x + dx * 0.4, y - 8, x + dx * 0.7, y + 4, x + dx, y - 3);
+      ctx.stroke();
+    }
+
+    if (fluorescence) {
+      if (patchShape === "multifocal") {
+        const patches = [
+          { x: cx - 65, y: cy + 15, rx: 38, ry: 28, angle: 0.4 },
+          { x: cx + 85, y: cy - 55, rx: 30, ry: 22, angle: -0.2 },
+          { x: cx - 25, y: cy + 85, rx: 25, ry: 20, angle: 0.8 },
+          { x: cx + 55, y: cy + 65, rx: 28, ry: 22, angle: 0.15 },
+        ];
+        for (const p of patches) {
+          const grd = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, Math.max(p.rx, p.ry));
+          grd.addColorStop(0, "rgba(57, 255, 20, 0.9)");
+          grd.addColorStop(0.5, "rgba(57, 255, 20, 0.35)");
+          grd.addColorStop(1, "rgba(57, 255, 20, 0)");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, p.rx, p.ry, p.angle, 0, 2 * Math.PI);
+          ctx.fill();
+          const grd2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.rx * 0.5);
+          grd2.addColorStop(0, "rgba(200, 255, 130, 0.95)");
+          grd2.addColorStop(1, "rgba(57, 255, 20, 0)");
+          ctx.fillStyle = grd2;
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, p.rx * 0.5, p.ry * 0.5, p.angle, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      } else {
+        const gx = cx + 40, gy = cy - 30;
+        const grd = ctx.createRadialGradient(gx, gy, 5, gx, gy, 70);
+        grd.addColorStop(0, "rgba(57, 255, 20, 0.9)");
+        grd.addColorStop(0.5, "rgba(57, 255, 20, 0.35)");
+        grd.addColorStop(1, "rgba(57, 255, 20, 0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, 70, 52, 0.3, 0, 2 * Math.PI);
+        ctx.fill();
+        const grd2 = ctx.createRadialGradient(gx, gy, 0, gx, gy, 32);
+        grd2.addColorStop(0, "rgba(200, 255, 130, 0.95)");
+        grd2.addColorStop(1, "rgba(57, 255, 20, 0)");
+        ctx.fillStyle = grd2;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, 32, 24, 0.3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+
+    const vig = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = vig;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.strokeStyle = "#2a1a40";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.font = "bold 13px monospace";
+    ctx.fillStyle = "rgba(180, 150, 230, 0.8)";
+    ctx.textAlign = "left";
+    ctx.fillText("UV 365nm", cx - R + 14, cy - R + 26);
+    ctx.textAlign = "right";
+    ctx.fillText("Wood's lamp", cx + R - 14, cy - R + 26);
+    ctx.textAlign = "left";
+  }, [fluorescence, patchShape]);
+
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase" }}>Wood's Lamp Examination</div>
+      <div style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>UV 365 nm — darkened room</div>
+      <canvas ref={canvasRef} width={500} height={500} style={{ width: "100%", maxWidth: 500, display: "block", background: "#000" }} />
+    </div>
+  );
+}
+
+// ─── IDTRenderer ───────────────────────────────────────────────────────────
+function IDTRenderer({ testData }) {
+  const recipe = testData?.render_recipe || {};
+  const staticImage = testData?.static_image || null;
+  const wheals = recipe.wheals || [];
+  const controls = recipe.controls || {};
+
+  if (staticImage) {
+    return (
+      <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase" }}>Intradermal Allergen Test</div>
+        <div style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>Read at 15 minutes</div>
+        <DiagImage asset={staticImage} alt="Intradermal allergen test" />
+        {testData.image_attribution && (
+          <div style={{ fontSize: 10, fontStyle: "italic", color: "#888", marginTop: 4 }}>{testData.image_attribution}</div>
+        )}
+      </div>
+    );
+  }
+
+  const GRADE = {
+    0: { fill: "transparent", radius: 0 },
+    1: { fill: "#f8c8c8", radius: 12 },
+    2: { fill: "#f098a0", radius: 18 },
+    3: { fill: "#e05060", radius: 24, halo: true },
+    4: { fill: "#c81020", radius: 30, halo: true, bigHalo: true },
+  };
+
+  const allSites = [
+    { label: controls.negative_label || "NEG", grade: 0 },
+    ...wheals,
+    { label: controls.positive_label || "POS", grade: 4 },
+  ];
+
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Intradermal Allergen Test — Read at 15 minutes</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 80px)", gap: "12px 8px", marginBottom: 12 }}>
+        {allSites.map((site, i) => {
+          const g = GRADE[site.grade] || GRADE[0];
+          return (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <div style={{ width: 70, height: 70, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {g.bigHalo && <div style={{ position: "absolute", width: (g.radius + 12) * 2, height: (g.radius + 12) * 2, borderRadius: "50%", background: "rgba(220,60,40,0.18)" }} />}
+                {g.halo && <div style={{ position: "absolute", width: (g.radius + 6) * 2, height: (g.radius + 6) * 2, borderRadius: "50%", background: "rgba(240,100,80,0.22)" }} />}
+                <div style={{ position: "absolute", width: 40, height: 40, borderRadius: "50%", background: "#e8c9a0", border: "1px solid #c8a07a" }} />
+                {site.grade > 0 && <div style={{ position: "absolute", width: g.radius * 2, height: g.radius * 2, borderRadius: "50%", background: g.fill }} />}
+                {site.grade === 0 && <div style={{ position: "absolute", width: 34, height: 34, borderRadius: "50%", border: "1.5px dashed #b09060" }} />}
+              </div>
+              <div style={{ fontSize: 9, textAlign: "center", color: "#555", maxWidth: 60, lineHeight: 1.2, wordBreak: "break-word" }}>{site.label}</div>
+              <div style={{ fontSize: 9, color: "#999" }}>{site.grade}/4</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 10, color: "#888", fontStyle: "italic", borderTop: "1px solid #eee", paddingTop: 8 }}>
+        Graded relative to saline (0/4) and histamine (4/4) controls.
+      </div>
+    </div>
+  );
+}
+
+// ─── SNAPRenderer ──────────────────────────────────────────────────────────
+function SNAPRenderer({ testData }) {
+  const recipe = testData?.render_recipe || {};
+  const testName = recipe.test_name || "SNAP Test";
+  const spots = recipe.spots || [];
+
+  const sorted = [
+    ...spots.filter(s => s.result === "control"),
+    ...spots.filter(s => s.result !== "control"),
+  ];
+  const positives = sorted.filter(s => s.result === "positive");
+
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase", marginBottom: 12 }}>SNAP Test</div>
+      <div style={{
+        width: 300, height: 180, borderRadius: 12,
+        background: "#f5f0e8", border: "2px solid #333",
+        boxShadow: "2px 4px 12px rgba(0,0,0,0.18)",
+        padding: "12px 16px", boxSizing: "border-box",
+        display: "flex", flexDirection: "column", gap: 8,
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: "#009999" }} />
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{testName}</div>
+          <div style={{ fontSize: 10, color: "#555" }}>SNAP® Test</div>
+        </div>
+        <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 4 }}>
+          {sorted.map((spot, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: spot.result === "negative" ? "transparent" : "#0066cc",
+                border: "2px solid " + (spot.result === "negative" ? "#bbb" : "#0044aa"),
+              }} />
+              <div style={{ fontSize: 9, color: "#444", fontWeight: 600 }}>{spot.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 12, color: "#444" }}>
+        {positives.length > 0
+          ? `Positive: ${positives.map(s => s.label).join(", ")}`
+          : "All results negative"}
+      </div>
+    </div>
+  );
+}
+
 // ─── TextRenderer ──────────────────────────────────────────────────────────
 const EVIDENCE_LABELS = {
   confirmatory: { text: "[CONFIRMATORY]", color: "#1a7a1a" },
@@ -2021,6 +2247,13 @@ function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, ca
   if (displayType === "report") inner = <LabReportRenderer testKey={testKey} testData={testData} patient={patient} ownerName={ownerName} caseId={caseId} />;
   else if (displayType === "image") inner = <ImageRenderer testKey={testKey} testLabel={testLabel} testData={testData} />;
   else if (displayType === "waveform") inner = <ECGRenderer testData={testData} />;
+  else if (displayType === "custom") {
+    const renderType = testData.render_type || "";
+    if (renderType === "woods_lamp") inner = <WoodsLampRenderer testData={testData} />;
+    else if (renderType === "idt") inner = <IDTRenderer testData={testData} />;
+    else if (renderType === "snap") inner = <SNAPRenderer testData={testData} />;
+    else inner = <TextRenderer testKey={testKey} testLabel={testLabel} testData={testData} patient={patient} />;
+  }
   else inner = <TextRenderer testKey={testKey} testLabel={testLabel} testData={testData} patient={patient} />;
 
   // Shell driven by catalogue group: Reference Lab → SIMLAB letterhead; all others → in-house
