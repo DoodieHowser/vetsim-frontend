@@ -2004,7 +2004,7 @@ function TextRenderer({ testKey, testLabel, testData, patient }) {
 }
 
 // ─── DiagnosticResultModal ──────────────────────────────────────────────────
-function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, caseId, onClose }) {
+function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, caseId, onClose, diagnosticsCatalogue }) {
   useEffect(() => {
     if (!open) return;
     const onKey = e => { if (e.key === "Escape") onClose(); };
@@ -2015,7 +2015,6 @@ function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, ca
   if (!open || !testData) return null;
 
   const displayType = testData.display_type || "text";
-  const reportFormat = testData.report_format;
   const testLabel = testData.label || testKey;
 
   let inner;
@@ -2024,9 +2023,11 @@ function DiagnosticResultModal({ open, testKey, testData, patient, ownerName, ca
   else if (displayType === "waveform") inner = <ECGRenderer testData={testData} />;
   else inner = <TextRenderer testKey={testKey} testLabel={testLabel} testData={testData} patient={patient} />;
 
-  const shell = reportFormat === "inhouse"
-    ? <InHouseReportShell testLabel={testLabel} patient={patient}>{inner}</InHouseReportShell>
-    : <SIMLABReportShell testKey={testKey} patient={patient} ownerName={ownerName} caseId={caseId}>{inner}</SIMLABReportShell>;
+  // Shell driven by catalogue group: Reference Lab → SIMLAB letterhead; all others → in-house
+  const group = (diagnosticsCatalogue || []).find(t => t.key === testKey)?.group || "";
+  const shell = group === "Reference Lab"
+    ? <SIMLABReportShell testKey={testKey} patient={patient} ownerName={ownerName} caseId={caseId}>{inner}</SIMLABReportShell>
+    : <InHouseReportShell testLabel={testLabel} patient={patient}>{inner}</InHouseReportShell>;
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -2732,6 +2733,7 @@ export default function App() {
         ownerName={s.sessionData?.state.client?.name}
         caseId={s.caseId}
         onClose={closeDiagnosticModal}
+        diagnosticsCatalogue={s.allDiagnostics}
       />
 
       <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }`}</style>
