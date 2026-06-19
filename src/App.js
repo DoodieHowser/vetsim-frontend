@@ -1756,87 +1756,182 @@ function ImageRenderer({ testKey, testLabel, testData }) {
 function ECGRenderer({ testData }) {
   const canvasRef = useRef(null);
   const wf = testData?.waveform_data || {};
+
   const hr = wf.heart_rate || 120;
-  const vpcPresent = !!wf.vpc_present;
-  const vpcFreq = wf.vpc_frequency || 0;
-  const rhythm = (wf.rhythm || "").toUpperCase() === "IRREGULAR" ? "IRREGULAR" : "REGULAR";
-  const photoAsset = wf.image_asset || testData?.image_asset || null;
-  const photoAttr = wf.image_attribution || testData?.image_attribution || null;
+
+  // Normalize rhythm: legacy "irregular"/"regular"/empty → "sinus"
+  const rawRhythm = (wf.rhythm || "").toLowerCase();
+  const VALID_RHYTHMS = ["sinus", "sinus_arrhythmia", "atrial_fibrillation", "av_block_2"];
+  const rhythm = VALID_RHYTHMS.includes(rawRhythm) ? rawRhythm : "sinus";
+
+  // Ectopy: new schema first; backward-compat legacy vpc_present/vpc_frequency fields
+  const ectopy = wf.ectopy
+    || (wf.vpc_present === true
+      ? { type: "ventricular", frequency_per_min: wf.vpc_frequency || 0, pattern: "single" }
+      : null);
+  const ectopyType = ectopy?.type || null;
+  const ectopyFreq = ectopy?.frequency_per_min || 0;
+  const ectopyPattern = ectopy?.pattern || "single";
+
+  // static_image: show DiagImage INSTEAD of canvas when non-null
+  const staticImage = wf.static_image != null ? wf.static_image : null;
+  const photoAttr = wf.image_attribution || null;
+
+  // morphology is read-forward only — never used here, never crashes
+  // interpretation is never rendered (reserved for backend)
 
   useEffect(() => {
+    if (staticImage) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const W = 660, H = 160;
+    const W = 660, H = 160, base = 100;
     ctx.clearRect(0, 0, W, H);
-    // ECG paper grid
+
+    // ECG paper — fine grid
     ctx.strokeStyle = "#ffcccc"; ctx.lineWidth = 1;
-    for (let x = 0; x <= W; x += 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y <= H; y += 10) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    for (let gx = 0; gx <= W; gx += 10) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (let gy = 0; gy <= H; gy += 10) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+    // Coarse grid
     ctx.strokeStyle = "#ff9999"; ctx.lineWidth = 1;
-    for (let x = 0; x <= W; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y <= H; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    for (let gx = 0; gx <= W; gx += 50) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (let gy = 0; gy <= H; gy += 50) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+
     // Trace
     ctx.strokeStyle = "#111"; ctx.lineWidth = 1.6; ctx.lineJoin = "round";
-    const base = 100;
     ctx.beginPath();
     ctx.moveTo(0, base);
-    // Calibration pulse — 20px vertical step at far left
+
+    // Calibration pulse
     ctx.lineTo(8, base);
     ctx.lineTo(8, base - 20);
     ctx.lineTo(18, base - 20);
     ctx.lineTo(18, base);
     let x = 42;
     ctx.lineTo(x, base);
-    const dx = 70;
-    const vpcEvery = vpcPresent ? Math.max(3, Math.min(5, Math.round(hr / Math.max(1, vpcFreq)))) : Infinity;
-    let beat = 0;
+
+    // Rate-driven beat spacing: 1 sec = 250 px at 25 mm/sec → bs = 60/hr * 250
+    const bs = Math.max(40, (60 / Math.max(30, hr)) * 250);
+
+    // Waveform shape helpers — all continue the active path; caller advances x
+    const drawNormal = (px) => {
+      ctx.lineTo(px + 6,  base);        // isoelectric to P
+      ctx.lineTo(px + 12, base - 8);    // P peak
+      ctx.lineTo(px + 18, base);
+      ctx.lineTo(px + 23, base + 6);    // Q
+      ctx.lineTo(px + 28, base - 50);   // R
+      ctx.lineTo(px + 33, base + 12);   // S
+      ctx.lineTo(px + 38, base);
+      ctx.lineTo(px + 48, base - 14);   // T
+      ctx.lineTo(px + 58, base);
+    };
+
+    const drawQRST = (px) => {          // no P wave (AFib)
+      ctx.lineTo(px + 8,  base + 6);    // Q
+      ctx.lineTo(px + 13, base - 50);   // R
+      ctx.lineTo(px + 18, base + 12);   // S
+      ctx.lineTo(px + 23, base);
+      ctx.lineTo(px + 33, base - 14);   // T
+      ctx.lineTo(px + 43, base);
+    };
+
+    const drawPOnly = (px) => {         // dropped beat: P wave, no QRS-T
+      ctx.lineTo(px + 6,  base);
+      ctx.lineTo(px + 12, base - 8);
+      ctx.lineTo(px + 18, base);
+    };
+
+    const drawVPC = (px) => {           // ventricular premature complex
+      ctx.lineTo(px + 5,  base);
+      ctx.lineTo(px + 15, base - 80);   // tall spike
+      ctx.lineTo(px + 25, base + 30);   // deep nadir
+      ctx.lineTo(px + 30, base);
+      ctx.lineTo(px + 42, base + 18);   // wide opposite-polarity T
+      ctx.lineTo(px + 54, base);
+    };
+
+    // Pre-compute VPC beat indices for "single" pattern
+    const approxBeats = Math.max(1, Math.floor((W - x - 60) / bs));
+    const vpcSet = new Set();
+    if (ectopyType === "ventricular" && ectopyPattern === "single" && ectopyFreq > 0) {
+      const stripMins = approxBeats / Math.max(1, hr);
+      const count = Math.max(1, Math.round(ectopyFreq * stripMins));
+      const step = Math.max(3, Math.floor(approxBeats / (count + 1)));
+      for (let i = 1; i <= count && i * step < approxBeats; i++) vpcSet.add(i * step);
+    }
+
+    const runStart = Math.max(2, Math.floor(approxBeats / 2) - 1);
+    let beat = 0, runDrawn = false;
+
     while (x < W - 60) {
-      const isVpc = vpcPresent && beat > 0 && beat % vpcEvery === 0;
-      if (isVpc) {
-        // No preceding P; wide bizarre QRS (20px), tall (80px); opposite-polarity T
-        ctx.lineTo(x + 5, base);
-        ctx.lineTo(x + 15, base - 80);
-        ctx.lineTo(x + 25, base + 30);
-        ctx.lineTo(x + 30, base);
-        ctx.lineTo(x + 42, base + 18);
-        ctx.lineTo(x + 54, base);
-        x += dx + 30; // compensatory pause
+      let advance = bs;
+
+      if (rhythm === "atrial_fibrillation") {
+        const jitter = 0.75 + Math.random() * 0.5;
+        advance = bs * jitter;
+        drawQRST(x);
+
+      } else if (rhythm === "av_block_2" && beat > 0 && beat % 4 === 0) {
+        drawPOnly(x);
+        advance = bs * 2; // flat pause replaces the dropped QRS-T
+
       } else {
-        ctx.lineTo(x + 6, base);        // P wave
-        ctx.lineTo(x + 12, base - 8);
-        ctx.lineTo(x + 18, base);
-        ctx.lineTo(x + 23, base + 6);   // Q
-        ctx.lineTo(x + 28, base - 50);  // R
-        ctx.lineTo(x + 33, base + 12);  // S
-        ctx.lineTo(x + 38, base);
-        ctx.lineTo(x + 48, base - 14);  // T wave
-        ctx.lineTo(x + 58, base);
-        x += dx;
+        if (rhythm === "sinus_arrhythmia") {
+          advance = bs * (1 + 0.15 * Math.sin(2 * Math.PI * beat / 7));
+        }
+
+        let isVPC = false;
+        if (ectopyType === "ventricular") {
+          if (ectopyPattern === "bigeminy" && beat % 2 === 1) {
+            isVPC = true;
+          } else if (ectopyPattern === "run" && !runDrawn && beat === runStart) {
+            for (let ri = 0; ri < 3 && x < W - 80; ri++) {
+              drawVPC(x);
+              x += bs;
+              beat++;
+            }
+            runDrawn = true;
+            ctx.lineTo(x + 10, base);
+            x += 10;
+            continue;
+          } else if (ectopyPattern === "single" && vpcSet.has(beat)) {
+            isVPC = true;
+          }
+        }
+
+        if (isVPC) {
+          drawVPC(x);
+          advance = bs + 30; // compensatory pause
+        } else {
+          drawNormal(x);
+        }
       }
+
+      x += advance;
       beat++;
     }
+
     ctx.lineTo(W, base);
     ctx.stroke();
-  }, [hr, vpcPresent, vpcFreq]);
+  }, [hr, rhythm, ectopyType, ectopyFreq, ectopyPattern, staticImage]);
 
   return (
     <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
       <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase" }}>Electrocardiography</div>
       <div style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>Lead II — 25 mm/sec — 10 mm/mV</div>
-      {photoAsset && (
-        <div style={{ marginBottom: 12 }}>
-          <DiagImage asset={photoAsset} alt="ECG trace" />
+      {staticImage ? (
+        <div>
+          <DiagImage asset={staticImage} alt="ECG trace" />
           {photoAttr && <div style={{ fontSize: 10, fontStyle: "italic", color: "#888", marginTop: 4 }}>{photoAttr}</div>}
         </div>
+      ) : (
+        <canvas ref={canvasRef} width={660} height={160} style={{ width: "100%", maxWidth: 660, border: "1px solid #d0d0d0", display: "block" }} />
       )}
-      <canvas ref={canvasRef} width={660} height={160} style={{ width: "100%", maxWidth: 660, border: "1px solid #d0d0d0", display: "block" }} />
       <div style={{ fontFamily: "monospace", background: "#1a1a1a", color: "#00cc00", padding: 12, marginTop: 12, fontSize: 13, lineHeight: 1.6 }}>
-        <div style={{ whiteSpace: "pre" }}>{`HEART RATE:     ${hr} bpm\nRHYTHM:         ${rhythm}\nVPC FREQUENCY:  ${vpcFreq} per minute`}</div>
-        {vpcPresent && <div style={{ color: "#ffff00", marginTop: 6 }}>*** VENTRICULAR ECTOPY DETECTED ***</div>}
+        <div>{`HEART RATE:     ${hr} bpm`}</div>
       </div>
       <div style={{ fontSize: 12, marginTop: 10, lineHeight: 1.6 }}>
-        Rhythm interpretation is the responsibility of the attending clinician. This trace requires evaluation before anesthesia.
+        Rhythm interpretation is the responsibility of the attending clinician.
       </div>
     </div>
   );
