@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Icon, Chip, Btn, DogAvatar, CATEGORY_ICONS } from "./ui/DesignKit";
 import RoomScene from "./room/RoomScene";
+import ExamFluoresceinRenderer from "./FluoresceinRenderer";
 import pepperImg from "./images/pepper.png";
 import pepperVentralImg from "./images/pepper_ventral.png";
 import pepperFrontalImg from "./images/pepper_frontal.png";
@@ -193,6 +194,7 @@ const PEPPER_CLOSEUPS = {
   temperature: pepperTemperatureImg,
   hydration: pepperHydrationImg,
   lymph_nodes: pepperLymphNodesImg,
+  eyes: null,
 };
 const BISCUIT_CLOSEUPS = {
   general: biscuitGeneralImg,
@@ -205,6 +207,7 @@ const BISCUIT_CLOSEUPS = {
   ears: biscuitEarsImg,
   paws: biscuitPawsImg,
   lymph_nodes: biscuitLymphNodesImg,
+  eyes: null,
 };
 function getCloseups(caseId) {
   if (caseId === "derm_001") return PEPPER_CLOSEUPS;
@@ -267,7 +270,7 @@ function ChatMessage({ msg, onViewResult }) {
   );
 }
 
-function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeupImages = {} }) {
+function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeupImages = {}, caseId }) {
   const [activeViewIdx, setActiveViewIdx] = useState(0);
   const [selectedArea, setSelectedArea] = useState(null);
 
@@ -297,11 +300,12 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
 
   const view = views[activeViewIdx];
   const selectedFinding = selectedArea ? examined.find(e => e.subtype === selectedArea) : null;
+  const fluoresceinResult = "negative"; // all current cases have no corneal ulceration
 
   const handleAreaTap = (key) => {
-    if (examLookup[key]) return;
+    if (examLookup[key] && key !== "eyes") return;
     setSelectedArea(key);
-    onExamine(key);
+    if (!examLookup[key]) onExamine(key);
   };
 
   return (
@@ -439,8 +443,10 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
 
           {/* Non-scrolling flex column — image takes remaining space, finding text pinned below */}
           <div style={{ flex: 1, overflow: "hidden", padding: "12px 16px 12px", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
-            {/* Close-up image or placeholder — fills available height */}
-            {closeupImages[selectedArea] ? (
+            {/* Close-up image, fluorescein renderer, or placeholder */}
+            {selectedArea === "eyes" ? (
+              <ExamFluoresceinRenderer result={fluoresceinResult} />
+            ) : closeupImages[selectedArea] ? (
               <img
                 src={closeupImages[selectedArea]}
                 alt={`${selectedArea} close-up`}
@@ -2051,186 +2057,6 @@ function WoodsLampRenderer({ testData }) {
   );
 }
 
-// ─── FluoresceinRenderer ───────────────────────────────────────────────────
-function FluoresceinRenderer({ testData }) {
-  const canvasRef = useRef(null);
-  const recipe = testData?.render_recipe || {};
-  const uptake = recipe.uptake || "none";
-  const eyeSide = recipe.eye_side || "OS";
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const W = 500, H = 500, cx = 250, cy = 250, R = 230;
-    ctx.clearRect(0, 0, W, H);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-    ctx.clip();
-
-    // Cobalt-blue background — lighter at centre, darker at edge
-    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    bg.addColorStop(0, "#0050b3");
-    bg.addColorStop(1, "#003580");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    // Iris
-    ctx.beginPath();
-    ctx.arc(cx, cy, 180, 0, 2 * Math.PI);
-    ctx.fillStyle = "#4a6080";
-    ctx.fill();
-    ctx.strokeStyle = "#2a4060";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Pupil
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 70, 70, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = "#000";
-    ctx.fill();
-
-    // Specular highlight — small arc upper-left of iris
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx - 70, cy - 80, 15, 0.3, Math.PI * 0.9);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.restore();
-
-    // Lower eyelid margin — gentle curve at bottom third of field
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx - 180, cy + 100);
-    ctx.quadraticCurveTo(cx, cy + 175, cx + 180, cy + 100);
-    ctx.strokeStyle = "rgba(136, 153, 170, 0.5)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-
-    if (uptake === "focal") {
-      const fx = cx + 55, fy = cy - 40;
-      // Outer diffuse glow
-      const grd = ctx.createRadialGradient(fx, fy, 0, fx, fy, 50);
-      grd.addColorStop(0, "rgba(0, 255, 136, 0.7)");
-      grd.addColorStop(1, "rgba(0, 255, 136, 0)");
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.ellipse(fx, fy, 50, 42, 0.2, 0, 2 * Math.PI);
-      ctx.fill();
-      // Inner tight glow
-      const grd2 = ctx.createRadialGradient(fx, fy, 0, fx, fy, 25);
-      grd2.addColorStop(0, "rgba(0, 255, 136, 1)");
-      grd2.addColorStop(1, "rgba(0, 255, 136, 0)");
-      ctx.fillStyle = grd2;
-      ctx.beginPath();
-      ctx.ellipse(fx, fy, 25, 21, 0.2, 0, 2 * Math.PI);
-      ctx.fill();
-    } else if (uptake === "dendritic") {
-      const branches = [
-        [[cx - 30, cy + 20], [cx + 30, cy - 40]],   // main trunk
-        [[cx,      cy - 10], [cx - 40, cy - 50]],    // branch left
-        [[cx,      cy - 10], [cx + 50, cy - 10]],    // branch right
-        [[cx + 30, cy - 40], [cx + 20, cy - 75]],    // sub-branch tip-left
-        [[cx + 30, cy - 40], [cx + 60, cy - 60]],    // sub-branch tip-right
-      ];
-      const bulbs = [
-        [cx - 40, cy - 50], [cx + 50, cy - 10],
-        [cx + 20, cy - 75], [cx + 60, cy - 60],
-      ];
-
-      // Glow pass — wider, transparent
-      ctx.save();
-      ctx.strokeStyle = "rgba(0, 255, 136, 0.25)";
-      ctx.lineWidth = 8;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      for (const [[x1, y1], [x2, y2]] of branches) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Line pass — crisp 3px
-      ctx.save();
-      ctx.strokeStyle = "#00ff88";
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      for (const [[x1, y1], [x2, y2]] of branches) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Terminal end-bulbs
-      ctx.save();
-      for (const [bx, by] of bulbs) {
-        const bgrd = ctx.createRadialGradient(bx, by, 0, bx, by, 10);
-        bgrd.addColorStop(0, "rgba(0, 255, 136, 0.6)");
-        bgrd.addColorStop(1, "rgba(0, 255, 136, 0)");
-        ctx.fillStyle = bgrd;
-        ctx.beginPath();
-        ctx.arc(bx, by, 10, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.fillStyle = "#00ff88";
-      for (const [bx, by] of bulbs) {
-        ctx.beginPath();
-        ctx.arc(bx, by, 5, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    ctx.restore(); // end circular clip
-
-    // Vignette
-    const vig = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R);
-    vig.addColorStop(0, "rgba(0,0,0,0)");
-    vig.addColorStop(1, "rgba(0,0,0,0.75)");
-    ctx.fillStyle = vig;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-    ctx.fill();
-
-    // Border ring
-    ctx.strokeStyle = "#1a2a40";
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    // Labels
-    ctx.font = "bold 13px monospace";
-    ctx.fillStyle = "rgba(150, 190, 230, 0.85)";
-    ctx.textAlign = "left";
-    ctx.fillText("Cobalt blue", cx - R + 14, cy - R + 26);
-    ctx.textAlign = "right";
-    ctx.fillText(eyeSide, cx + R - 14, cy - R + 26);
-    ctx.textAlign = "center";
-    ctx.font = "italic 11px Arial, sans-serif";
-    ctx.fillStyle = "rgba(100, 220, 150, 0.75)";
-    ctx.fillText("Fluorescein", cx, cy + R - 14);
-    ctx.textAlign = "left";
-  }, [uptake, eyeSide]);
-
-  return (
-    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#222" }}>
-      <div style={{ fontSize: 14, fontWeight: 700, textTransform: "uppercase" }}>Fluorescein Stain</div>
-      <div style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>Cobalt-blue illumination — slit lamp</div>
-      <canvas ref={canvasRef} width={500} height={500} style={{ width: "100%", maxWidth: 500, display: "block", background: "#000" }} />
-    </div>
-  );
-}
-
 // ─── IDTRenderer ───────────────────────────────────────────────────────────
 function IDTRenderer({ testData }) {
   const recipe = testData?.render_recipe || {};
@@ -3068,7 +2894,7 @@ export default function App() {
           </div>
         );
       case "exam":
-        return <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} />;
+        return <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} caseId={s.caseId} />;
       case "stabilize":
         // Multi-select plan builder for emergency stabilization actions
         // (setting === "stabilize"). Reuses TreatmentPanel; confirming applies
