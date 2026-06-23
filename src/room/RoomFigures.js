@@ -2,11 +2,32 @@
 // vitals monitor, vet stool), ported from the design prototype (room-figures.jsx)
 // as ES module exports. Presentation only.
 import { EMOTION_META } from "../ui/DesignKit";
+import jamesNeutralImg from "../images/owner_james_neutral.png";
+import jamesFrustratedImg from "../images/owner_james_frustrated.png";
+import jamesSkepticalImg from "../images/owner_james_skeptical.png";
+import jamesEngagedImg from "../images/owner_james_engaged.png";
+import jamesRelievedImg from "../images/owner_james_relieved.png";
+import sarahPanickedImg from "../images/owner_sarah_panicked.png";
+import sarahDesperateImg from "../images/owner_sarah_desperate.png";
+import sarahAnxiousImg from "../images/owner_sarah_anxious.png";
+import sarahRelievedImg from "../images/owner_sarah_relieved.png";
+import sarahGratefulImg from "../images/owner_sarah_grateful.png";
 
-// per-case owner appearance (inlined from the design's window.OWNER_LOOKS)
-const OWNER_LOOKS = {
-  derm_001: { skin: "#7C5638", hair: "#1E1A17", shirt: "#4F6356" },
-  gdv_001:  { skin: "#C49A6C", hair: "#3A2A1C", shirt: "#6A4E6B" },
+const OWNER_IMAGES = {
+  derm_001: {
+    neutral:    jamesNeutralImg,
+    frustrated: jamesFrustratedImg,
+    skeptical:  jamesSkepticalImg,
+    engaged:    jamesEngagedImg,
+    relieved:   jamesRelievedImg,
+  },
+  gdv_001: {
+    panicked:   sarahPanickedImg,
+    desperate:  sarahDesperateImg,
+    anxious:    sarahAnxiousImg,
+    relieved:   sarahRelievedImg,
+    grateful:   sarahGratefulImg,
+  },
 };
 
 export function ExamTable() {
@@ -34,57 +55,17 @@ export function ExamTable() {
   );
 }
 
-// Static frustrated owner figure. mood is fixed by the scene (not wired to live
-// emotion data, per design rule) — defaults to "frustrated".
-export function SeatedOwner({ caseId = "derm_001", speaking, dimmed, mood = "frustrated" }) {
-  const look = OWNER_LOOKS[caseId] || { skin: "#7C5638", hair: "#1E1A17", shirt: "#4F6356" };
-  const { skin, hair, shirt } = look;
-  const trouser = "#3A3F46", shoe = "#2A2320";
-  const frus = mood === "frustrated" || mood === "panicked";
+export function SeatedOwner({ caseId = "derm_001", speaking, dimmed, mood = "neutral" }) {
+  const caseImages = OWNER_IMAGES[caseId] || OWNER_IMAGES.derm_001;
+  const defaultMood = caseId === "gdv_001" ? "panicked" : "neutral";
+  const src = caseImages[mood] || caseImages[defaultMood];
   return (
-    <div style={{ position: "absolute", left: 150, top: 360, width: 250, height: 400,
-      transition: "filter .3s, opacity .3s", filter: dimmed ? "saturate(0.85) brightness(0.97)" : "none", opacity: dimmed ? 0.94 : 1,
+    <div style={{ position: "absolute", left: 80, top: 400,
+      transition: "filter .3s, opacity .3s",
+      filter: dimmed ? "saturate(0.85) brightness(0.97)" : "none",
+      opacity: dimmed ? 0.94 : 1,
       animation: speaking ? "rmBob 2.8s ease-in-out infinite" : "none" }}>
-      <svg width="250" height="400" viewBox="0 0 250 400" style={{ display: "block", overflow: "visible" }}>
-        <ellipse cx="125" cy="384" rx="96" ry="16" fill="rgba(40,22,10,0.20)" />
-        <rect x="52" y="120" width="146" height="150" rx="22" fill="#6B7480" />
-        <rect x="60" y="128" width="130" height="58" rx="16" fill="#7E8AA0" />
-        <rect x="64" y="276" width="13" height="104" rx="4" fill="#4A3018" />
-        <rect x="173" y="276" width="13" height="104" rx="4" fill="#4A3018" />
-        <rect x="52" y="258" width="146" height="34" rx="14" fill="#6B7480" />
-        <rect x="86" y="300" width="22" height="74" rx="9" fill={trouser} />
-        <rect x="142" y="300" width="22" height="74" rx="9" fill={trouser} />
-        <path d="M82 368h30v8q0 6-7 6H78q-6 0-2-7Z" fill={shoe} />
-        <path d="M168 368h-30v8q0 6 7 6h27q6 0 2-7Z" fill={shoe} />
-        <path d="M84 262q41-12 82 0l-3 46q-38 10-76 0Z" fill={trouser} />
-        <path d="M88 168q37-15 74 0l8 100q-45 16-90 0Z" fill={shirt} />
-        <path d="M88 168q37-15 74 0l3 30q-40-12-80 0Z" fill="rgba(255,255,255,0.09)" />
-        <path d="M90 176q-18 34-12 84l24 6q-4-50 8-84Z" fill={shirt} />
-        <path d="M160 176q18 34 12 84l-24 6q4-50-8-84Z" fill={shirt} />
-        <ellipse cx="106" cy="266" rx="13" ry="10" fill={skin} />
-        <ellipse cx="144" cy="266" rx="13" ry="10" fill={skin} />
-        <rect x="115" y="132" width="20" height="30" rx="9" fill={skin} />
-        <rect x="115" y="132" width="20" height="9" rx="4" fill="rgba(0,0,0,0.12)" />
-        <ellipse cx="125" cy="100" rx="32" ry="35" fill={skin} />
-        <circle cx="93" cy="102" r="5.5" fill={skin} />
-        <circle cx="157" cy="102" r="5.5" fill={skin} />
-        <ellipse cx="113" cy="84" rx="11" ry="8" fill="#fff" opacity="0.12" />
-        <path d="M91 92q-3-44 34-44t34 44q-9-22-34-22t-34 22Z" fill={hair} />
-        <circle cx="112" cy="100" r="3.8" fill="#241E1A" />
-        <circle cx="138" cy="100" r="3.8" fill="#241E1A" />
-        <circle cx="113.2" cy="98.8" r="1.2" fill="#fff" />
-        <circle cx="139.2" cy="98.8" r="1.2" fill="#fff" />
-        {frus
-          ? <path d="M104 89q7 -1.5 14 0.5M132 89q7 -1.5 14 0.5" stroke={hair} strokeWidth="2.6" fill="none" strokeLinecap="round" />
-          : <path d="M104 90q7-3 14 0M132 90q7-3 14 0" stroke={hair} strokeWidth="2.4" fill="none" strokeLinecap="round" opacity="0.85" />}
-        <path d="M125 102v9q-3 2-6 2" stroke="rgba(0,0,0,0.16)" strokeWidth="2" fill="none" strokeLinecap="round" />
-        {mood === "frustrated"
-          ? <path d="M115 116q10 1.5 22 0" stroke="#3A2A20" strokeWidth="2.6" fill="none" strokeLinecap="round" />
-          : mood === "panicked"
-          ? <ellipse cx="125" cy="117" rx="6" ry="4.5" fill="#3A2A20" />
-          : <path d="M114 115q11 5 23 0" stroke="#3A2A20" strokeWidth="2.6" fill="none" strokeLinecap="round" />}
-        {speaking && <ellipse cx="125" cy="100" rx="40" ry="43" fill="none" stroke="var(--ds-accent)" strokeWidth="2.5" opacity="0.55" />}
-      </svg>
+      <img src={src} alt="" style={{ width: caseId === "gdv_001" ? 260 : 320, height: "auto", display: "block" }} />
     </div>
   );
 }

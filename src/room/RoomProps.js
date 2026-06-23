@@ -2,6 +2,19 @@
 // prototype (room-props.jsx) as ES module exports. Presentation only — no logic.
 import React, { useMemo } from "react";
 import { Icon } from "../ui/DesignKit";
+import techNeutralImg from "../images/tech_neutral_ready.png";
+import techFocusedImg from "../images/tech_focused.png";
+import techConcernedImg from "../images/tech_concerned.png";
+import techUrgentImg from "../images/tech_urgent.png";
+import techReassuringImg from "../images/tech_reassuring.png";
+
+const TECH_IMAGES = {
+  neutral:    techNeutralImg,
+  focused:    techFocusedImg,
+  concerned:  techConcernedImg,
+  urgent:     techUrgentImg,
+  reassuring: techReassuringImg,
+};
 
 // ── time-of-day light presets (drives wall warmth + window glow) ──
 export const TOD = {
@@ -83,32 +96,11 @@ export function BackCounter() {
   );
 }
 
-export function VetTechFigure() {
+export function VetTechFigure({ mood = "neutral" }) {
+  const src = TECH_IMAGES[mood] || TECH_IMAGES.neutral;
   return (
-    <div style={{ position: "absolute", left: 1016, top: 232, width: 128, height: 262 }}>
-      <svg width="128" height="262" viewBox="0 0 128 262" style={{ display: "block", overflow: "visible" }}>
-        <ellipse cx="64" cy="252" rx="42" ry="10" fill="rgba(40,22,10,0.20)" />
-        <rect x="46" y="170" width="16" height="82" rx="6" fill="#2F6F67" />
-        <rect x="66" y="170" width="16" height="82" rx="6" fill="#2F6F67" />
-        <path d="M42 248h22v6q0 5-6 5H40q-5 0-2-6Z" fill="#EDEDE8" />
-        <path d="M86 248H64v6q0 5 6 5h18q5 0 2-6Z" fill="#EDEDE8" />
-        <path d="M40 98q24-11 48 0l8 78q-32 12-64 0Z" fill="#3E8E84" />
-        <path d="M64 98v78" stroke="rgba(0,0,0,0.10)" strokeWidth="2" />
-        <path d="M40 102q-13 30-9 66l13 3q-2-36 8-64Z" fill="#3E8E84" />
-        <path d="M88 102q13 30 9 66l-13 3q2-36-8-64Z" fill="#3E8E84" />
-        <ellipse cx="40" cy="172" rx="7" ry="6" fill="#CDA074" />
-        <ellipse cx="88" cy="172" rx="7" ry="6" fill="#CDA074" />
-        <rect x="57" y="78" width="14" height="24" rx="6" fill="#CDA074" />
-        <ellipse cx="64" cy="56" rx="24" ry="26" fill="#CDA074" />
-        <path d="M38 60q-4-40 26-40t26 40q-3-22-9-28 4 10 3 22-8-18-20-18t-20 18q-1-12 3-22-6 6-9 28Z" fill="#2A2320" />
-        <circle cx="64" cy="15" r="9" fill="#2A2320" />
-        <path d="M40 56q-5 10-3 22M88 56q5 10 3 22" stroke="#2A2320" strokeWidth="5" fill="none" strokeLinecap="round" />
-        <circle cx="56" cy="56" r="2.6" fill="#241E1A" />
-        <circle cx="72" cy="56" r="2.6" fill="#241E1A" />
-        <path d="M51 50q4-3 8-1M65 49q4-2 8 1" stroke="#2A2320" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-        <path d="M58 66q6 4 12 0" stroke="#241E1A" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <rect x="74" y="116" width="11" height="15" rx="2" fill="#EDEDE8" stroke="#2F6F67" strokeWidth="1" />
-      </svg>
+    <div style={{ position: "absolute", left: 980, top: 350 }}>
+      <img src={src} alt="" style={{ width: 150, height: "auto", display: "block" }} />
     </div>
   );
 }
