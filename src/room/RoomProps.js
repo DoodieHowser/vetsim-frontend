@@ -99,8 +99,8 @@ export function BackCounter() {
 export function VetTechFigure({ mood = "neutral" }) {
   const src = TECH_IMAGES[mood] || TECH_IMAGES.neutral;
   return (
-    <div style={{ position: "absolute", left: 980, top: 350 }}>
-      <img src={src} alt="" style={{ width: 150, height: "auto", display: "block" }} />
+    <div style={{ position: "absolute", left: 955, top: 205 }}>
+      <img src={src} alt="" style={{ width: 320, height: "auto", display: "block" }} />
     </div>
   );
 }

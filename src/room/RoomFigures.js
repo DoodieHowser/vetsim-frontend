@@ -60,12 +60,12 @@ export function SeatedOwner({ caseId = "derm_001", speaking, dimmed, mood = "neu
   const defaultMood = caseId === "gdv_001" ? "panicked" : "neutral";
   const src = caseImages[mood] || caseImages[defaultMood];
   return (
-    <div style={{ position: "absolute", left: 80, top: 400,
+    <div style={{ position: "absolute", left: caseId === "gdv_001" ? 245 : 95, top: caseId === "gdv_001" ? 290 : 265,
       transition: "filter .3s, opacity .3s",
       filter: dimmed ? "saturate(0.85) brightness(0.97)" : "none",
       opacity: dimmed ? 0.94 : 1,
       animation: speaking ? "rmBob 2.8s ease-in-out infinite" : "none" }}>
-      <img src={src} alt="" style={{ width: caseId === "gdv_001" ? 260 : 320, height: "auto", display: "block" }} />
+      <img src={src} alt="" style={{ width: caseId === "gdv_001" ? "auto" : 400, height: caseId === "gdv_001" ? 480 : "auto", display: "block" }} />
     </div>
   );
 }
