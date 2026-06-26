@@ -15,14 +15,16 @@ import pepperEarImg from "./images/Pepper_ear.png";
 import pepperPawImg from "./images/Pepper_paw.png";
 import pepperAbdomenImg from "./images/Pepper_abdomen.png";
 import pepperGeneralImg from "./images/Pepper_general.png";
-import pepperCardiovascularImg from "./images/Pepper_cardiovascular.png";
 import pepperRespiratoryImg from "./images/Pepper_Respiratory.png";
 import pepperTemperatureImg from "./images/Pepper_temperature.png";
 import pepperHydrationImg from "./images/Pepper_hydration.png";
 import pepperLymphNodesImg from "./images/Pepper_lymph_nodes.png";
+import pepperElbowsImg from "./images/pepper_elbows.png";
+import biscuitElbowsImg from "./images/biscuit_elbows.png";
+import pepperMouthImg from "./images/Pepper_mouth.png";
+import biscuitMouthImg from "./images/Biscuit_mouth.png";
 import biscuitGeneralImg from "./images/Biscuit_general.png";
 import biscuitAbdomenImg from "./images/Biscuit_abdomen.png";
-import biscuitCardiovascularImg from "./images/Biscuit_cardiovascular.png";
 import biscuitRespiratoryImg from "./images/Biscuit_respiratory.png";
 import biscuitTemperatureImg from "./images/Biscuit_temperature.png";
 import biscuitHydrationImg from "./images/Biscuit_hydration.png";
@@ -72,9 +74,6 @@ const VIEWS = [
     origW: 1536, origH: 1024, labelFontSize: 38,
     regions: [
       { mapKey: "lat_temperature", key: "temperature", label: "Temp",    cx: 1300, cy:  380, rx:  90, ry:  70 },
-      { mapKey: "lat_general",     key: "general",     label: "General", cx:  750, cy:  470, rx: 120, ry: 100 },
-      { mapKey: "lat_skin",        key: "skin",        label: "Skin",    cx:  800, cy:  600, rx: 400, ry:  50 },
-      { mapKey: "lat_lymph",       key: "lymph_nodes", label: "Lymph",   cx:  460, cy:  400, rx:  60, ry:  50 },
       { mapKey: "lat_paws",        key: "paws",        label: "Paws",    cx:  440, cy:  920, rx: 100, ry:  50 },
       { mapKey: "lat_ears",        key: "ears",        label: "Ears",    cx:  265, cy:  155, rx:  58, ry:  88 },
       { mapKey: "lat_eyes",        key: "eyes",        label: "Eyes",    cx:  155, cy:  290, rx:  50, ry:  40 },
@@ -85,9 +84,7 @@ const VIEWS = [
     image: pepperVentralImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
     regions: [
-      { mapKey: "ven_hydration", key: "hydration", label: "Hydration", cx: 510, cy:  340, rx: 140, ry:  70 },
-      { mapKey: "ven_abdomen",   key: "abdomen",   label: "Abdomen",   cx: 510, cy:  720, rx: 150, ry: 120 },
-      { mapKey: "ven_skin",      key: "skin",      label: "Skin",      cx: 510, cy:  980, rx: 280, ry: 160 },
+      { mapKey: "ven_abdomen",   key: "abdomen",   label: "Abdomen",   cx: 510, cy:  720, rx: 210, ry: 170 },
     ],
   },
   {
@@ -95,11 +92,10 @@ const VIEWS = [
     image: pepperFrontalImg,
     origW: 1122, origH: 1402, labelFontSize: 28,
     regions: [
-      { mapKey: "frt_ears",         key: "ears",           label: "Ears",   cx:  210, cy: 175, rx: 130, ry: 115 },
-      { mapKey: "frt_eyes",         key: "eyes",           label: "Eyes",   cx:  370, cy: 430, rx:  80, ry:  60 },
-      { mapKey: "frt_respiratory",  key: "respiratory",    label: "Lungs",  cx:  561, cy: 700, rx: 240, ry: 155 },
-      { mapKey: "frt_cardio",       key: "cardiovascular", label: "Heart",  cx:  650, cy: 660, rx: 130, ry: 110 },
-      { mapKey: "frt_elbows",       key: "elbows",         label: "Elbows", cx:  195, cy: 870, rx: 120, ry:  80 },
+      { mapKey: "frt_ears",         key: "ears",           label: "Ears",   cx:  270, cy: 175, rx: 130, ry: 115 },
+      { mapKey: "frt_eyes",         key: "eyes",           label: "Eyes",   cx:  430, cy: 430, rx:  80, ry:  60 },
+      { mapKey: "frt_mouth",        key: "mouth",          label: "Mouth",  cx:  561, cy: 600, rx: 120, ry:  75 },
+      { mapKey: "frt_elbows",       key: "elbows",         label: "Elbows", cx:  270, cy: 900, rx: 120, ry:  80 },
     ],
   },
   {
@@ -120,13 +116,12 @@ const BISCUIT_VIEWS = [
     image: biscuitImg,
     origW: 1536, origH: 1024, labelFontSize: 38,
     regions: [
-      { mapKey: "lat_abdomen", key: "abdomen",        label: "Abdomen", cx:  680, cy: 640, rx: 250, ry: 140 },
-      { mapKey: "lat_cardio",  key: "cardiovascular", label: "Heart",   cx: 1010, cy: 440, rx: 115, ry:  90 },
-      { mapKey: "lat_general", key: "general",        label: "General", cx:  720, cy: 370, rx: 120, ry:  95 },
+      { mapKey: "lat_abdomen", key: "abdomen",        label: "Abdomen", cx:  680, cy: 550, rx: 250, ry: 140 },
+      { mapKey: "lat_mouth",   key: "mouth",          label: "Mouth",   cx: 1370, cy: 470, rx:  70, ry:  45 },
       { mapKey: "lat_temp",    key: "temperature",    label: "Temp",    cx:  220, cy: 340, rx:  90, ry:  70 },
-      { mapKey: "lat_paws",    key: "paws",           label: "Paws",    cx: 1150, cy: 930, rx: 110, ry:  50 },
-      { mapKey: "lat_eyes",    key: "eyes",           label: "Eyes",    cx: 1390, cy: 295, rx:  52, ry:  42 },
-      { mapKey: "lat_ears",    key: "ears",           label: "Ears",    cx: 1345, cy: 220, rx:  65, ry:  90 },
+      { mapKey: "lat_paws",    key: "paws",           label: "Paws",    cx:  950, cy: 880, rx: 110, ry:  50 },
+      { mapKey: "lat_eyes",    key: "eyes",           label: "Eyes",    cx: 1305, cy: 375, rx:  52, ry:  42 },
+      { mapKey: "lat_ears",    key: "ears",           label: "Ears",    cx: 1175, cy: 315, rx:  65, ry:  90 },
     ],
   },
   {
@@ -134,7 +129,6 @@ const BISCUIT_VIEWS = [
     image: biscuitVentralImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
     regions: [
-      { mapKey: "ven_hydration", key: "hydration", label: "Hydration", cx: 512, cy:  290, rx: 140, ry:  70 },
       { mapKey: "ven_abdomen",   key: "abdomen",   label: "Abdomen",   cx: 512, cy:  820, rx: 400, ry: 290 },
     ],
   },
@@ -143,12 +137,11 @@ const BISCUIT_VIEWS = [
     image: biscuitFrontalImg,
     origW: 1122, origH: 1402, labelFontSize: 28,
     regions: [
-      { mapKey: "frt_ears",        key: "ears",           label: "Ears",    cx: 185, cy: 290, rx: 115, ry: 110 },
-      { mapKey: "frt_eyes",        key: "eyes",           label: "Eyes",    cx: 385, cy: 430, rx:  85, ry:  65 },
-      { mapKey: "frt_respiratory", key: "respiratory",    label: "Lungs",   cx: 561, cy: 620, rx: 250, ry: 165 },
-      { mapKey: "frt_cardio",      key: "cardiovascular", label: "Heart",   cx: 650, cy: 590, rx: 155, ry: 120 },
-      { mapKey: "frt_abdomen",     key: "abdomen",        label: "Abdomen", cx: 561, cy: 920, rx: 280, ry: 130 },
-      { mapKey: "frt_elbows",      key: "elbows",         label: "Elbows",  cx: 195, cy: 870, rx: 120, ry:  80 },
+      { mapKey: "frt_ears",        key: "ears",    label: "Ears",    cx: 250, cy: 230, rx: 115, ry: 110 },
+      { mapKey: "frt_eyes",        key: "eyes",    label: "Eyes",    cx: 580, cy: 220, rx:  85, ry:  65 },
+      { mapKey: "frt_mouth",       key: "mouth",   label: "Mouth",   cx: 540, cy: 460, rx: 135, ry:  80 },
+      { mapKey: "frt_abdomen",     key: "abdomen", label: "Abdomen", cx: 561, cy: 920, rx: 280, ry: 130 },
+      { mapKey: "frt_elbows",      key: "elbows",  label: "Elbows",  cx: 280, cy: 980, rx: 120, ry:  80 },
     ],
   },
   {
@@ -156,7 +149,7 @@ const BISCUIT_VIEWS = [
     image: biscuitCaudalImg,
     origW: 1024, origH: 1536, labelFontSize: 26,
     regions: [
-      { mapKey: "cau_temperature", key: "temperature", label: "Temp", cx: 512, cy:  475, rx: 110, ry:  85 },
+      { mapKey: "cau_temperature", key: "temperature", label: "Temp", cx: 512, cy:  505, rx: 110, ry:  85 },
       { mapKey: "cau_paws",        key: "paws",        label: "Paws", cx: 290, cy: 1390, rx:  95, ry:  55 },
     ],
   },
@@ -166,7 +159,7 @@ const BISCUIT_VIEWS = [
 // Parent group order for the Diagnostics tab. Each test carries its own
 // `group` (one of these) and `category` (subcategory) field, so subcategories
 // are derived from the data rather than hardcoded.
-const DIAGNOSTICS_GROUP_ORDER = ["In-House", "Reference Lab", "Referral"];
+const DIAGNOSTICS_GROUP_ORDER = ["Physical Exam", "In-House", "Reference Lab", "Referral"];
 
 const DIAGNOSIS_CATEGORY_ORDER = [
   "Dermatology",
@@ -189,17 +182,17 @@ const PEPPER_CLOSEUPS = {
   paws: pepperPawImg,
   abdomen: pepperAbdomenImg,
   general: pepperGeneralImg,
-  cardiovascular: pepperCardiovascularImg,
   respiratory: pepperRespiratoryImg,
   temperature: pepperTemperatureImg,
   hydration: pepperHydrationImg,
   lymph_nodes: pepperLymphNodesImg,
+  mouth: pepperMouthImg,
+  elbows: pepperElbowsImg,
   eyes: null,
 };
 const BISCUIT_CLOSEUPS = {
   general: biscuitGeneralImg,
   abdomen: biscuitAbdomenImg,
-  cardiovascular: biscuitCardiovascularImg,
   respiratory: biscuitRespiratoryImg,
   temperature: biscuitTemperatureImg,
   hydration: biscuitHydrationImg,
@@ -207,6 +200,8 @@ const BISCUIT_CLOSEUPS = {
   ears: biscuitEarsImg,
   paws: biscuitPawsImg,
   lymph_nodes: biscuitLymphNodesImg,
+  mouth: biscuitMouthImg,
+  elbows: biscuitElbowsImg,
   eyes: null,
 };
 function getCloseups(caseId) {
@@ -270,11 +265,19 @@ function ChatMessage({ msg, onViewResult }) {
   );
 }
 
-function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeupImages = {}, caseId }) {
+function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeupImages = {}, caseId, initialZone, onZoneConsumed }) {
   const [activeViewIdx, setActiveViewIdx] = useState(0);
   const [selectedArea, setSelectedArea] = useState(null);
 
   useEffect(() => { setActiveViewIdx(0); setSelectedArea(null); }, [views]);
+
+  useEffect(() => {
+    if (initialZone) {
+      setSelectedArea(initialZone);
+      if (!examLookup[initialZone]) onExamine(initialZone);
+      if (onZoneConsumed) onZoneConsumed();
+    }
+  }, [initialZone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const examLookup = {};
   for (const f of examined) {
@@ -303,10 +306,14 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
   const fluoresceinResult = "negative"; // all current cases have no corneal ulceration
 
   const handleAreaTap = (key) => {
-    if (examLookup[key] && key !== "eyes") return;
     setSelectedArea(key);
     if (!examLookup[key]) onExamine(key);
   };
+
+  const selectedRegion = selectedArea ? view.regions.find(r => r.key === selectedArea) : null;
+  const focalOrigin = selectedRegion
+    ? `${(selectedRegion.cx / view.origW) * 100}% ${(selectedRegion.cy / view.origH) * 100}%`
+    : "50% 50%";
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
@@ -342,7 +349,12 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
         <img
           src={view.image}
           alt={`${view.label} view`}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          style={{
+            width: "100%", height: "100%", objectFit: "contain", display: "block",
+            transform: selectedArea ? "scale(1.8)" : "scale(1)",
+            transformOrigin: focalOrigin,
+            transition: "transform 0.35s ease",
+          }}
         />
 
         {/* SVG region overlay — viewBox matches native image px so coords align with objectFit:contain */}
@@ -391,89 +403,90 @@ function DogBodyDiagram({ views, examined, examHealthImpacts, onExamine, closeup
           })}
         </svg>
 
-        {/* Backdrop — dims image and dismisses sheet on outside tap */}
+        {/* Full-bleed close-up overlay — fades in over the zoomed diagram */}
         <div
-          onClick={() => setSelectedArea(null)}
           style={{
-            position: "absolute", inset: 0, zIndex: 10,
-            background: selectedArea ? "rgba(0,0,0,0.28)" : "transparent",
+            position: "absolute", inset: 0, zIndex: 11,
+            background: "rgba(0,0,0,0.82)",
+            opacity: selectedArea ? 1 : 0,
             pointerEvents: selectedArea ? "auto" : "none",
-            transition: "background 0.28s ease",
+            transition: "opacity 0.3s ease",
           }}
-        />
-
-        {/* Bottom sheet — slides up over image, scoped within image container */}
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: "absolute", bottom: 0, left: 0, right: 0,
-            height: "62%",
-            background: "var(--color-background-primary)",
-            borderRadius: "14px 14px 0 0",
-            boxShadow: "0 -4px 24px rgba(0,0,0,0.18)",
-            zIndex: 11,
-            display: "flex",
-            flexDirection: "column",
-            transform: selectedArea ? "translateY(0)" : "translateY(100%)",
-            transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
+          onClick={() => setSelectedArea(null)}
         >
-          {/* Drag handle */}
-          <div style={{ paddingTop: 10, paddingBottom: 2, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--color-border-secondary)" }} />
+          {/* Close-up content — scales in gently */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: selectedArea ? "scale(1)" : "scale(0.94)",
+              transition: "transform 0.3s ease",
+            }}
+          >
+            {selectedArea === "eyes" ? (
+              <div style={{ width: "100%", height: "100%", padding: "48px 16px 16px" }}>
+                <ExamFluoresceinRenderer result={fluoresceinResult} />
+              </div>
+            ) : closeupImages[selectedArea] ? (
+              <img
+                src={closeupImages[selectedArea]}
+                alt={`${selectedArea} close-up`}
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: "rgba(255,255,255,0.45)" }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+                </svg>
+                {selectedArea && !selectedFinding
+                  ? <span style={{ fontSize: 13, fontStyle: "italic" }}>Examining…</span>
+                  : <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em" }}>No close-up available</span>
+                }
+              </div>
+            )}
           </div>
 
-          {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px 8px", flexShrink: 0, borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-            <div style={{ fontSize: 14, fontWeight: 600, textTransform: "capitalize", color: "var(--color-text-primary)" }}>
+          {/* Floating header — area name + dismiss */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "absolute", top: 0, left: 0, right: 0, zIndex: 12,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "10px 12px",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)",
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize", color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em" }}>
               {selectedArea ? selectedArea.replace(/_/g, " ") : ""}
-            </div>
+            </span>
             <button
               onClick={() => setSelectedArea(null)}
               style={{
                 width: 28, height: 28, borderRadius: "50%", border: "none", cursor: "pointer",
-                background: "var(--color-background-tertiary)",
+                background: "rgba(255,255,255,0.15)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1, flexShrink: 0,
+                fontSize: 13, color: "rgba(255,255,255,0.9)", lineHeight: 1,
               }}
             >
               ✕
             </button>
           </div>
 
-          {/* Non-scrolling flex column — image takes remaining space, finding text pinned below */}
-          <div style={{ flex: 1, overflow: "hidden", padding: "12px 16px 12px", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
-            {/* Close-up image, fluorescein renderer, or placeholder */}
-            {selectedArea === "eyes" ? (
-              <ExamFluoresceinRenderer result={fluoresceinResult} />
-            ) : closeupImages[selectedArea] ? (
-              <img
-                src={closeupImages[selectedArea]}
-                alt={`${selectedArea} close-up`}
-                style={{ flex: 1, minHeight: 0, width: "100%", objectFit: "contain", borderRadius: 8, display: "block" }}
-              />
-            ) : (
-              <div style={{
-                flex: 1, minHeight: 0,
-                background: "var(--color-background-tertiary)",
-                border: "0.5px solid var(--color-border-tertiary)",
-                borderRadius: 8,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-              }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-border-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
-                </svg>
-                <span style={{ fontSize: 10, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Close-up photo</span>
-              </div>
-            )}
-
-            {/* Examining indicator — shown only while backend is processing */}
-            {selectedArea && !selectedFinding && (
-              <div style={{ flexShrink: 0, fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic" }}>
-                Examining…
-              </div>
-            )}
-          </div>
+          {/* Examining indicator bottom bar — only while waiting */}
+          {selectedArea && !selectedFinding && closeupImages[selectedArea] && (
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 12,
+                padding: "8px 14px",
+                background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)",
+                fontSize: 12, color: "rgba(255,255,255,0.6)", fontStyle: "italic",
+              }}
+            >
+              Examining…
+            </div>
+          )}
         </div>
       </div>
 
@@ -2636,16 +2649,106 @@ function HistoryChartPanel({ chart, patient }) {
   );
 }
 
+function HandsOnAssessment({ assessments, diagnosticsMeta, onAssess, autoTrigger, onAutoTriggerConsumed }) {
+  const [done, setDone] = useState({});
+
+  const handleAssess = (key) => {
+    setDone(prev => ({ ...prev, [key]: true }));
+    if (onAssess) onAssess(key);
+  };
+
+  useEffect(() => {
+    if (autoTrigger) {
+      handleAssess(autoTrigger);
+      if (onAutoTriggerConsumed) onAutoTriggerConsumed();
+    }
+  }, [autoTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const enriched = assessments.map(a => {
+    const meta = (diagnosticsMeta || []).find(d => d.key === a.key) || {};
+    return { ...a, label: meta.label || a.key, category: meta.category || "Other" };
+  });
+
+  // Group by category, preserving insertion order
+  const groups = {};
+  for (const a of enriched) {
+    const cat = a.category || "Other";
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(a);
+  }
+
+  if (assessments.length === 0) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>No bedside assessments available for this case.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", background: "var(--color-background-primary)" }}>
+      {Object.entries(groups).map(([category, items]) => (
+        <div key={category}>
+          <div style={{ padding: "10px 12px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-secondary)" }}>
+            {category}
+          </div>
+          {items.map((item) => {
+            const isDone = done[item.key];
+            return (
+              <div
+                key={item.key}
+                style={{
+                  display: "flex", flexDirection: "column", padding: "10px 12px",
+                  borderTop: "0.5px solid var(--color-border-tertiary)",
+                  borderLeft: isDone ? "3px solid rgba(34,197,94,0.6)" : "3px solid transparent",
+                  background: "var(--color-background-primary)",
+                  gap: isDone ? 6 : 0,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{item.label}</span>
+                  <button
+                    onClick={() => handleAssess(item.key)}
+                    style={{
+                      padding: "4px 10px", fontSize: 11, fontWeight: 500,
+                      borderRadius: "var(--border-radius-md)", cursor: "pointer",
+                      border: "0.5px solid var(--color-border-secondary)",
+                      background: "var(--color-background-primary)",
+                      color: "var(--color-text-secondary)",
+                      flexShrink: 0, marginLeft: 8,
+                    }}
+                  >
+                    Perform
+                  </button>
+                </div>
+                {isDone && (
+                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
+                    {item.result}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function initState() {
   return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], differentialsLog: [], finalDxSelected: [], finalDiagnosis: null, surfacedEventTs: [], followUpPlan: { recheckId: null, recheckBucket: null, labs: [] }, dispositionSelected: null, dispositionConfirmPending: false };
 }
 
 export default function App() {
   const [s, setS] = useState(initState());
+  const [examSubTab, setExamSubTab] = useState("visual");
+  const [selectedExamZone, setSelectedExamZone] = useState(null);
+  const [triggeredAssessmentKey, setTriggeredAssessmentKey] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [s.messages]);
+  useEffect(() => { setExamSubTab("visual"); }, [s.sessionId]);
 
   useEffect(() => {
     Promise.all([
@@ -2894,7 +2997,38 @@ export default function App() {
           </div>
         );
       case "exam":
-        return <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} caseId={s.caseId} />;
+        return (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+            <div style={{ display: "flex", flexShrink: 0, borderBottom: "0.5px solid var(--color-border-tertiary)", background: "var(--color-background-secondary)" }}>
+              {[
+                { id: "visual",     label: "Physical Exam",        sub: "Tap an area on the patient to examine it" },
+                { id: "assessment", label: "Hands-On Assessment",   sub: "Re-examine after interventions to track patient response" },
+              ].map(tab => {
+                const active = examSubTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setExamSubTab(tab.id)}
+                    style={{
+                      flex: 1, padding: "9px 4px", border: "none", cursor: "pointer",
+                      fontSize: 11, fontWeight: active ? 600 : 400,
+                      textTransform: "uppercase", letterSpacing: "0.05em",
+                      color: active ? "var(--color-text-info)" : "var(--color-text-secondary)",
+                      background: active ? "var(--color-background-primary)" : "transparent",
+                      borderBottom: `2px solid ${active ? "var(--color-border-info)" : "transparent"}`,
+                      transition: "color 0.15s, background 0.15s",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            {examSubTab === "visual"
+              ? <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} caseId={s.caseId} initialZone={selectedExamZone} onZoneConsumed={() => setSelectedExamZone(null)} />
+              : <HandsOnAssessment assessments={s.sessionData?.state.case.bedside_assessments || []} diagnosticsMeta={s.allDiagnostics} onAssess={() => {}} autoTrigger={triggeredAssessmentKey} onAutoTriggerConsumed={() => setTriggeredAssessmentKey(null)} />}
+          </div>
+        );
       case "stabilize":
         // Multi-select plan builder for emergency stabilization actions
         // (setting === "stabilize"). Reuses TreatmentPanel; confirming applies
@@ -2957,8 +3091,20 @@ export default function App() {
         examCount={s.examFindings.length}
         spend={s.scores.cost}
         activeDrawer={s.activeTab}
-        drawerMeta={s.activeTab ? DRAWER_META[s.activeTab] : null}
+        drawerMeta={s.activeTab ? (s.activeTab === "exam" && examSubTab === "assessment"
+          ? { ...DRAWER_META.exam, sub: "Re-examine after interventions to track patient response" }
+          : DRAWER_META[s.activeTab]) : null}
         onNav={id => patch({ activeTab: id })}
+        onNavWithZone={(tabId, zone) => {
+          patch({ activeTab: tabId });
+          if (zone === "auscultation") {
+            setExamSubTab("assessment");
+            setTriggeredAssessmentKey("assess_auscultation");
+          } else if (zone === "eyes" || zone === "ears") {
+            setExamSubTab("visual");
+            setSelectedExamZone(zone);
+          }
+        }}
         onClose={() => patch({ activeTab: null })}
       >
         {renderDrawerBody()}

@@ -2,6 +2,7 @@
 // scenery and clickable objects on a responsive-scaled 1280×800 canvas, and
 // hosts the existing consultation panels in a slide-up Drawer. All data and
 // handlers are supplied by App — this component holds no clinical logic.
+// eslint-disable-next-line no-unused-vars
 import { DogAvatar, Icon } from "../ui/DesignKit";
 import { VetTechFigure, DustMotes, Vignette } from "./RoomProps";
 import { ExamTable, SeatedOwner, VitalsMonitor, RollingStool } from "./RoomFigures";
@@ -79,7 +80,7 @@ function PatientDog({ breed = "frenchie", size = 210 }) {
 export default function RoomScene({
   tod = "afternoon", scores, emotion, patient, caseId, presentingComplaint,
   diffCount = 0, examCount = 0, spend = 0,
-  activeDrawer, drawerMeta, onNav, onClose, children,
+  activeDrawer, drawerMeta, onNav, onNavWithZone, onClose, children,
 }) {
   const sc = useScale();
   const examActive = activeDrawer === "exam";
@@ -110,47 +111,47 @@ export default function RoomScene({
         <DustMotes />
 
         {/* clickable objects → workflow tabs */}
-        <Hotspot box={{ x: 250, y: 72, w: 210, h: 174 }} label="Pharmacy — oral meds" icon="pill"
+        <Hotspot box={{ x: 240, y: 60, w: 220, h: 185 }} label="Pharmacy — oral meds" icon="pill"
           active={activeDrawer === "treat_rx"} onClick={() => onNav("treat_rx")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 130, y: 244, w: 172, h: 124 }} label="Computer — patient chart" icon="monitor"
+        <Hotspot box={{ x: 260, y: 265, w: 155, h: 130 }} label="Computer — patient chart" icon="monitor"
           active={activeDrawer === "history"} onClick={() => onNav("history")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 360, y: 282, w: 80, h: 86 }} label="Microscope — diagnostics" icon="microscope"
+        <Hotspot box={{ x: 500, y: 255, w: 80, h: 145 }} label="Microscope — diagnostics" icon="microscope"
           active={activeDrawer === "diag"} onClick={() => onNav("diag")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 600, y: 70, w: 152, h: 392 }} label="Door — disposition" icon="door" labelSide="bottom" z={9}
+        <Hotspot box={{ x: 600, y: 65, w: 158, h: 420 }} label="Door — disposition" icon="door" labelSide="bottom" z={9}
           active={activeDrawer === "disposition"} onClick={() => onNav("disposition")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 800, y: 58, w: 116, h: 132 }} label="Clipboard — differentials" icon="list"
+        <Hotspot box={{ x: 863, y: 95, w: 148, h: 200 }} label="Clipboard — differentials" icon="list"
           active={activeDrawer === "dx"} onClick={() => onNav("dx")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 884, y: 250, w: 88, h: 112 }} label="Fridge — injectables" icon="syringe"
+        <Hotspot box={{ x: 820, y: 265, w: 148, h: 170 }} label="Fridge — injectables" icon="syringe"
           active={activeDrawer === "treat_clinic"} onClick={() => onNav("treat_clinic")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
 
         {/* exam instrument station (each opens the exam panel) */}
-        <Hotspot box={{ x: 462, y: 156, w: 44, h: 104 }} label="Ophthalmoscope — examine" icon="eye" z={12}
-          active={examActive} onClick={() => onNav("exam")}>
+        <Hotspot box={{ x: 488, y: 148, w: 48, h: 108 }} label="Ophthalmoscope — examine" icon="eye" z={12}
+          active={examActive} onClick={() => onNavWithZone ? onNavWithZone("exam", "eyes") : onNav("exam")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 506, y: 156, w: 44, h: 104 }} label="Otoscope — examine" icon="ear" z={12}
-          active={examActive} onClick={() => onNav("exam")}>
+        <Hotspot box={{ x: 536, y: 148, w: 48, h: 108 }} label="Otoscope — examine" icon="ear" z={12}
+          active={examActive} onClick={() => onNavWithZone ? onNavWithZone("exam", "ears") : onNav("exam")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
-        <Hotspot box={{ x: 558, y: 162, w: 38, h: 150 }} label="Stethoscope — examine" icon="stethoscope" z={12}
-          active={examActive} onClick={() => onNav("exam")}>
+        <Hotspot box={{ x: 562, y: 155, w: 52, h: 158 }} label="Stethoscope — examine" icon="stethoscope" z={12}
+          active={examActive} onClick={() => onNavWithZone ? onNavWithZone("exam", "auscultation") : onNav("exam")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
 
         {/* owner (ask) */}
-        <Hotspot box={{ x: 206, y: 402, w: 138, h: 338 }} label="Owner — ask questions" icon="chat" z={9}
+        <Hotspot box={{ x: 230, y: 380, w: 220, h: 380 }} label="Owner — ask questions" icon="chat" z={9}
           active={activeDrawer === "ask"} onClick={() => onNav("ask")}>
           <div style={{ position: "absolute", inset: 0 }} />
         </Hotspot>
@@ -159,15 +160,15 @@ export default function RoomScene({
         {/* exam table + patient (examine) — table and stool hidden; background image provides them */}
         <div style={{ display: "none" }}><ExamTable /></div>
         <div style={{ display: "none" }}><RollingStool /></div>
-        <Hotspot box={{ x: 483, y: 374, w: 315, h: 227 }} label="Examine patient" icon="stethoscope" z={11}
+        <Hotspot box={{ x: 483, y: 300, w: 315, h: 220 }} label="Examine patient" icon="stethoscope" z={11}
           active={examActive} onClick={() => onNav("exam")}>
-          <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)", filter: "drop-shadow(0 12px 16px rgba(40,22,10,0.34))" }}>
-            <PatientDog breed={breed} size={315} />
+          <div style={{ position: "absolute", left: "50%", bottom: 20, transform: "translateX(-50%)", filter: "drop-shadow(0 12px 16px rgba(40,22,10,0.34))" }}>
+            <PatientDog breed={breed} size={280} />
           </div>
         </Hotspot>
 
-        {/* live patient status (scores + owner-mood chip) */}
-        <VitalsMonitor trust={scores?.trust} health={scores?.patient_health} cost={scores?.cost} emotion={emotion} patientName={patientName} />
+        {/* live patient status — hidden until wired to tech assistance panel */}
+        <div style={{ display: "none" }}><VitalsMonitor trust={scores?.trust} health={scores?.patient_health} cost={scores?.cost} emotion={emotion} patientName={patientName} /></div>
 
         {/* orientation */}
         <div style={{ position: "absolute", left: 22, top: 20, zIndex: 30, display: "flex", alignItems: "center", gap: 9, padding: "8px 14px 8px 9px", borderRadius: 99, background: "rgba(255,253,249,0.84)", backdropFilter: "blur(4px)", border: "1px solid var(--color-border-tertiary)", boxShadow: "var(--ds-shadow-card)" }}>
