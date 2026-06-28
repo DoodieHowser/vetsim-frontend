@@ -2649,11 +2649,30 @@ function HistoryChartPanel({ chart, patient }) {
   );
 }
 
-function HandsOnAssessment({ assessments, diagnosticsMeta, onAssess, autoTrigger, onAutoTriggerConsumed }) {
-  const [done, setDone] = useState({});
+function HandsOnAssessment({ assessments, diagnosticsMeta, onAssess, autoTrigger, onAutoTriggerConsumed, sessionId, caseId,
+  bedsideDone, bedsideResults, onBedsideDone, onBedsideResults }) {
+  const done = bedsideDone || {};
+  const results = bedsideResults || {};
+  const [loading, setLoading] = useState({});
 
-  const handleAssess = (key) => {
-    setDone(prev => ({ ...prev, [key]: true }));
+  const handleAssess = async (key) => {
+    if (onBedsideDone) onBedsideDone(key);
+    setLoading(prev => ({ ...prev, [key]: true }));
+    try {
+      const res = await fetch(`${API}/input/bedside-assessment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, caseId, assessmentKey: key }),
+      });
+      const data = await res.json();
+      if (data.result && onBedsideResults) {
+        onBedsideResults(key, data.result);
+      }
+    } catch (err) {
+      console.error("Bedside assessment fetch failed:", err);
+    } finally {
+      setLoading(prev => ({ ...prev, [key]: false }));
+    }
     if (onAssess) onAssess(key);
   };
 
@@ -2713,17 +2732,21 @@ function HandsOnAssessment({ assessments, diagnosticsMeta, onAssess, autoTrigger
                       padding: "4px 10px", fontSize: 11, fontWeight: 500,
                       borderRadius: "var(--border-radius-md)", cursor: "pointer",
                       border: "0.5px solid var(--color-border-secondary)",
-                      background: "var(--color-background-primary)",
+                      background: done[item.key]
+                        ? "var(--color-background-secondary)"
+                        : "var(--color-background-primary)",
                       color: "var(--color-text-secondary)",
                       flexShrink: 0, marginLeft: 8,
                     }}
                   >
-                    Perform
+                    {done[item.key] ? "Re-examine" : "Perform"}
                   </button>
                 </div>
                 {isDone && (
                   <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                    {item.result}
+                    {loading[item.key]
+                      ? "Assessing..."
+                      : (results[item.key] || item.result)}
                   </div>
                 )}
               </div>
@@ -2736,7 +2759,7 @@ function HandsOnAssessment({ assessments, diagnosticsMeta, onAssess, autoTrigger
 }
 
 function initState() {
-  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], differentialsLog: [], finalDxSelected: [], finalDiagnosis: null, surfacedEventTs: [], followUpPlan: { recheckId: null, recheckBucket: null, labs: [] }, dispositionSelected: null, dispositionConfirmPending: false };
+  return { sessionId: null, caseId: "derm_001", messages: [], input: "", loading: false, scores: { trust: 50, patient_health: 100, cost: 50 }, actions: [], screen: "select", error: null, emotion: "concerned", sessionData: null, finalState: null, activeTab: null, examFindings: [], testsRun: [], testResults: {}, testImageData: {}, testResultsData: {}, diagnosticModal: { open: false, testKey: null, testData: null }, examResults: {}, examHealthImpacts: {}, allActions: [], actionsLoaded: false, selectedActionIds: [], pendingTreatments: [], diagnosisAttempted: [], allDiagnostics: [], allDiagnoses: [], selectedDiagnoses: [], differentialsLog: [], finalDxSelected: [], finalDiagnosis: null, surfacedEventTs: [], followUpPlan: { recheckId: null, recheckBucket: null, labs: [] }, dispositionSelected: null, dispositionConfirmPending: false, bedsideDone: {}, bedsideResults: {} };
 }
 
 export default function App() {
@@ -3026,7 +3049,7 @@ export default function App() {
             </div>
             {examSubTab === "visual"
               ? <DogBodyDiagram views={getViews(s.caseId)} examined={s.examFindings} examHealthImpacts={s.examHealthImpacts} onExamine={key => send(`exam:${key}`)} closeupImages={getCloseups(s.caseId)} caseId={s.caseId} initialZone={selectedExamZone} onZoneConsumed={() => setSelectedExamZone(null)} />
-              : <HandsOnAssessment assessments={s.sessionData?.state.case.bedside_assessments || []} diagnosticsMeta={s.allDiagnostics} onAssess={() => {}} autoTrigger={triggeredAssessmentKey} onAutoTriggerConsumed={() => setTriggeredAssessmentKey(null)} />}
+              : <HandsOnAssessment assessments={s.sessionData?.state.case.bedside_assessments || []} diagnosticsMeta={s.allDiagnostics} onAssess={() => {}} autoTrigger={triggeredAssessmentKey} onAutoTriggerConsumed={() => setTriggeredAssessmentKey(null)} sessionId={s.sessionId} caseId={s.caseId} bedsideDone={s.bedsideDone} bedsideResults={s.bedsideResults} onBedsideDone={(key) => setS(prev => ({ ...prev, bedsideDone: { ...prev.bedsideDone, [key]: true } }))} onBedsideResults={(key, result) => setS(prev => ({ ...prev, bedsideResults: { ...prev.bedsideResults, [key]: result } }))} />}
           </div>
         );
       case "stabilize":
